@@ -1,6 +1,9 @@
 // Declarative schema for the master-data (CRUD) screens. A single generic
 // ResourceManager renders any of these configs, so adding a new editable
 // resource is just data, not code.
+//
+// Each field can carry a `tip` (cara / apa yang diisi) and a `result` (hasilnya
+// apa di dashboard) — rendered as a hover tooltip next to the input label.
 
 export type FieldType = "text" | "number" | "textarea" | "select" | "tags";
 
@@ -10,6 +13,10 @@ export interface FieldDef {
   type: FieldType;
   options?: { value: string; label: string }[];
   hideInTable?: boolean;
+  /** What to enter / what this field means. */
+  tip?: string;
+  /** What this value drives / changes in the dashboard. */
+  result?: string;
 }
 
 export interface ResourceConfig {
@@ -22,6 +29,7 @@ export interface ResourceConfig {
   /** When true, the id is user-editable on create (natural key/code). */
   idEditable?: boolean;
   idLabel?: string;
+  idTip?: string;
   fields: FieldDef[];
 }
 
@@ -90,19 +98,20 @@ export const RESOURCES: ResourceConfig[] = [
     singular: "Proyek",
     idEditable: true,
     idLabel: "ID / Slug",
+    idTip: "Kode unik proyek (huruf kecil, tanpa spasi), mis. 'aurora'.",
     fields: [
-      { name: "name", label: "Nama Proyek", type: "text" },
-      { name: "contractor", label: "Kontraktor", type: "text" },
-      { name: "spv", label: "SPV", type: "text" },
-      { name: "units", label: "Unit", type: "number" },
-      { name: "baseline", label: "Baseline (%)", type: "number", hideInTable: true },
-      { name: "actual", label: "Actual (%)", type: "number" },
-      { name: "delay", label: "Delay (hari)", type: "number" },
-      { name: "day", label: "Hari ke-", type: "number", hideInTable: true },
-      { name: "target", label: "Target (hari)", type: "number", hideInTable: true },
-      { name: "status", label: "Status", type: "select", options: STATUS },
-      { name: "recovery", label: "Recovery Plan", type: "text", hideInTable: true },
-      { name: "decision", label: "Decision Needed", type: "text", hideInTable: true },
+      { name: "name", label: "Nama Proyek", type: "text", tip: "Nama proyek/cluster.", result: "Judul di tabel Proyek, filter, & modal detail." },
+      { name: "contractor", label: "Kontraktor", type: "text", tip: "Kontraktor utama pelaksana.", result: "Menautkan proyek ke performa kontraktor." },
+      { name: "spv", label: "SPV", type: "text", tip: "Supervisor / PIC lapangan.", result: "Penanggung jawab yang tampil di detail proyek." },
+      { name: "units", label: "Unit", type: "number", tip: "Jumlah unit dalam proyek.", result: "Bobot rata-rata progres & total unit di KPI." },
+      { name: "baseline", label: "Baseline (%)", type: "number", hideInTable: true, tip: "Target progres rencana (%) saat ini.", result: "Pembanding terhadap actual untuk deviasi jadwal." },
+      { name: "actual", label: "Actual (%)", type: "number", tip: "Realisasi progres fisik (%).", result: "Menentukan rata-rata progres & status On/At/Off Track." },
+      { name: "delay", label: "Delay (hari)", type: "number", tip: "Keterlambatan (hari) vs jadwal.", result: "Menandai proyek terlambat di dashboard." },
+      { name: "day", label: "Hari ke-", type: "number", hideInTable: true, tip: "Hari berjalan proyek saat ini.", result: "Konteks posisi waktu terhadap target durasi." },
+      { name: "target", label: "Target (hari)", type: "number", hideInTable: true, tip: "Durasi target proyek (hari).", result: "Acuan menilai apakah proyek on schedule." },
+      { name: "status", label: "Status", type: "select", options: STATUS, tip: "Kesehatan proyek: Hijau/Kuning/Merah.", result: "Warna indikator & hitungan On/At/Off Track di KPI." },
+      { name: "recovery", label: "Recovery Plan", type: "text", hideInTable: true, tip: "Rencana pemulihan bila terlambat.", result: "Muncul sebagai langkah aksi di detail proyek." },
+      { name: "decision", label: "Decision Needed", type: "text", hideInTable: true, tip: "Keputusan yang dibutuhkan dari pimpinan.", result: "Ditandai sebagai 'butuh keputusan' di detail proyek." },
     ],
   },
   {
@@ -110,16 +119,16 @@ export const RESOURCES: ResourceConfig[] = [
     title: "Kontraktor",
     singular: "Kontraktor",
     fields: [
-      { name: "rank", label: "Rank", type: "number" },
-      { name: "name", label: "Nama Kontraktor", type: "text" },
-      { name: "units", label: "Unit", type: "number" },
-      { name: "commitment", label: "Commitment (%)", type: "number", hideInTable: true },
-      { name: "delayFreq", label: "Delay Freq", type: "number" },
-      { name: "passRate", label: "Pass Rate (%)", type: "number" },
-      { name: "repeat", label: "Repeat Defect", type: "number", hideInTable: true },
-      { name: "takeover", label: "Take Over", type: "number", hideInTable: true },
-      { name: "retensi", label: "Retensi (%)", type: "number", hideInTable: true },
-      { name: "status", label: "Status Vendor", type: "select", options: VENDOR_STATUS },
+      { name: "rank", label: "Rank", type: "number", tip: "Peringkat kontraktor (1 = terbaik).", result: "Mengurutkan baris di tabel kontraktor." },
+      { name: "name", label: "Nama Kontraktor", type: "text", tip: "Nama kontraktor / vendor.", result: "Identitas di matriks performa vendor." },
+      { name: "units", label: "Unit", type: "number", tip: "Total unit yang dikerjakan vendor.", result: "Skala beban kerja kontraktor." },
+      { name: "commitment", label: "Commitment (%)", type: "number", hideInTable: true, tip: "Tingkat komitmen jadwal (%).", result: "Indikator keandalan vendor." },
+      { name: "delayFreq", label: "Delay Freq", type: "number", tip: "Frekuensi keterlambatan.", result: "Sinyal vendor sering telat." },
+      { name: "passRate", label: "Pass Rate (%)", type: "number", tip: "Tingkat lolos QC (%).", result: "Ukuran mutu pekerjaan vendor." },
+      { name: "repeat", label: "Repeat Defect", type: "number", hideInTable: true, tip: "Jumlah defect berulang.", result: "Menandai masalah mutu yang kronis." },
+      { name: "takeover", label: "Take Over", type: "number", hideInTable: true, tip: "Jumlah pekerjaan yang di-take over.", result: "Indikator vendor bermasalah." },
+      { name: "retensi", label: "Retensi (%)", type: "number", hideInTable: true, tip: "Retensi tertahan (%).", result: "Jaminan penyelesaian & mutu." },
+      { name: "status", label: "Status Vendor", type: "select", options: VENDOR_STATUS, tip: "Klasifikasi vendor (Preferred…Blacklist).", result: "Keputusan kelanjutan kerja sama." },
     ],
   },
   {
@@ -128,16 +137,17 @@ export const RESOURCES: ResourceConfig[] = [
     singular: "Komplain",
     idEditable: true,
     idLabel: "Kode (mis. K-118)",
+    idTip: "Kode unik komplain, mis. 'K-118'.",
     fields: [
-      { name: "unit", label: "Unit", type: "text" },
-      { name: "issue", label: "Isu", type: "textarea" },
-      { name: "level", label: "Level", type: "select", options: COMPLAINT_LEVEL },
-      { name: "owner", label: "Owner", type: "text" },
-      { name: "aging", label: "Aging (hari)", type: "number" },
-      { name: "slaResp", label: "SLA Respon", type: "select", options: SLA, hideInTable: true },
-      { name: "slaField", label: "SLA Lapangan", type: "select", options: SLA },
-      { name: "publicRisk", label: "Risiko Publik", type: "select", options: PUBLIC_RISK },
-      { name: "next", label: "Next Communication", type: "text", hideInTable: true },
+      { name: "unit", label: "Unit", type: "text", tip: "Unit/rumah yang dikomplain.", result: "Lokasi isu pada register komplain." },
+      { name: "issue", label: "Isu", type: "textarea", tip: "Deskripsi keluhan konsumen.", result: "Inti masalah yang ditindaklanjuti." },
+      { name: "level", label: "Level", type: "select", options: COMPLAINT_LEVEL, tip: "Tingkat: Critical / Major / Minor.", result: "Critical dihitung sebagai isu kritis (badge & KPI)." },
+      { name: "owner", label: "Owner", type: "text", tip: "PIC penyelesaian komplain.", result: "Akuntabilitas penanganan." },
+      { name: "aging", label: "Aging (hari)", type: "number", tip: "Lama komplain belum selesai (hari).", result: "Memicu sorotan bila melewati SLA." },
+      { name: "slaResp", label: "SLA Respon", type: "select", options: SLA, hideInTable: true, tip: "Status SLA respon awal.", result: "Menilai kecepatan tanggap." },
+      { name: "slaField", label: "SLA Lapangan", type: "select", options: SLA, tip: "Status SLA penanganan lapangan.", result: "Menilai kecepatan perbaikan." },
+      { name: "publicRisk", label: "Risiko Publik", type: "select", options: PUBLIC_RISK, tip: "Risiko viral / sorotan publik.", result: "Prioritas penanganan reputasi." },
+      { name: "next", label: "Next Communication", type: "text", hideInTable: true, tip: "Komunikasi berikutnya ke konsumen.", result: "Langkah lanjutan tercatat di detail." },
     ],
   },
   {
@@ -145,11 +155,11 @@ export const RESOURCES: ResourceConfig[] = [
     title: "Site Readiness",
     singular: "Site Readiness",
     fields: [
-      { name: "project", label: "Proyek", type: "text" },
-      { name: "window", label: "Window (mis. H-7)", type: "text" },
-      { name: "score", label: "Score", type: "number" },
-      { name: "status", label: "Status", type: "select", options: STATUS },
-      { name: "gaps", label: "Gap Utama (pisahkan dengan koma)", type: "tags", hideInTable: true },
+      { name: "project", label: "Proyek", type: "text", tip: "Proyek yang dinilai kesiapan site-nya.", result: "Menautkan skor kesiapan ke proyek." },
+      { name: "window", label: "Window (mis. H-7)", type: "text", tip: "Jendela waktu, mis. 'H-7'.", result: "Konteks tenggat kesiapan." },
+      { name: "score", label: "Score", type: "number", tip: "Skor kesiapan (0–100).", result: "Menentukan status siap / belum." },
+      { name: "status", label: "Status", type: "select", options: STATUS, tip: "Status kesiapan site.", result: "Warna indikator kesiapan." },
+      { name: "gaps", label: "Gap Utama (pisahkan dengan koma)", type: "tags", hideInTable: true, tip: "Daftar gap, pisahkan dengan koma.", result: "Daftar hal yang harus dibereskan sebelum siap." },
     ],
   },
   {
@@ -157,10 +167,10 @@ export const RESOURCES: ResourceConfig[] = [
     title: "Handover Readiness",
     singular: "Handover",
     fields: [
-      { name: "unit", label: "Unit", type: "text" },
-      { name: "window", label: "Window (mis. H-7)", type: "text" },
-      { name: "score", label: "Score", type: "number" },
-      { name: "status", label: "Status", type: "select", options: STATUS },
+      { name: "unit", label: "Unit", type: "text", tip: "Unit yang akan diserahterimakan.", result: "Identitas item handover." },
+      { name: "window", label: "Window (mis. H-7)", type: "text", tip: "Jendela waktu handover.", result: "Konteks tenggat serah terima." },
+      { name: "score", label: "Score", type: "number", tip: "Skor kesiapan handover (0–100).", result: "Menentukan siap / belum serah terima." },
+      { name: "status", label: "Status", type: "select", options: STATUS, tip: "Status kesiapan handover.", result: "Warna indikator handover." },
     ],
   },
   {
@@ -168,10 +178,10 @@ export const RESOURCES: ResourceConfig[] = [
     title: "AI Insights",
     singular: "Insight",
     fields: [
-      { name: "type", label: "Tipe", type: "text" },
-      { name: "tone", label: "Tone", type: "select", options: AI_TONE },
-      { name: "icon", label: "Ikon", type: "select", options: AI_ICON, hideInTable: true },
-      { name: "text", label: "Teks Insight", type: "textarea" },
+      { name: "type", label: "Tipe", type: "text", tip: "Kategori insight (mis. Trend, Vendor).", result: "Pengelompokan kartu di panel AI." },
+      { name: "tone", label: "Tone", type: "select", options: AI_TONE, tip: "Warna / urgensi insight.", result: "Warna kartu insight di panel AI." },
+      { name: "icon", label: "Ikon", type: "select", options: AI_ICON, hideInTable: true, tip: "Ikon representatif insight.", result: "Visual kartu insight." },
+      { name: "text", label: "Teks Insight", type: "textarea", tip: "Isi temuan / rekomendasi AI.", result: "Ditampilkan di panel AI & Decision." },
     ],
   },
   {
@@ -179,9 +189,9 @@ export const RESOURCES: ResourceConfig[] = [
     title: "Critical Decisions",
     singular: "Decision",
     fields: [
-      { name: "role", label: "Role", type: "text" },
-      { name: "tone", label: "Tone", type: "select", options: DECISION_TONE },
-      { name: "text", label: "Keputusan", type: "textarea" },
+      { name: "role", label: "Role", type: "text", tip: "Peran yang harus memutuskan (mis. Dirops).", result: "Label peran pada kartu keputusan." },
+      { name: "tone", label: "Tone", type: "select", options: DECISION_TONE, tip: "Warna / urgensi keputusan.", result: "Warna kartu keputusan." },
+      { name: "text", label: "Keputusan", type: "textarea", tip: "Keputusan yang dibutuhkan.", result: "Ditampilkan di panel Decision." },
     ],
   },
   {
@@ -189,16 +199,16 @@ export const RESOURCES: ResourceConfig[] = [
     title: "KPI",
     singular: "KPI",
     fields: [
-      { name: "no", label: "No", type: "number" },
-      { name: "kpi", label: "Nama KPI", type: "text" },
-      { name: "def", label: "Definisi", type: "text", hideInTable: true },
-      { name: "pic", label: "PIC", type: "text", hideInTable: true },
-      { name: "upd", label: "Update", type: "text", hideInTable: true },
-      { name: "green", label: "Ambang Hijau", type: "text", hideInTable: true },
-      { name: "yellow", label: "Ambang Kuning", type: "text", hideInTable: true },
-      { name: "red", label: "Ambang Merah", type: "text", hideInTable: true },
-      { name: "val", label: "Nilai Kini", type: "text" },
-      { name: "state", label: "Status", type: "select", options: KPI_STATE },
+      { name: "no", label: "No", type: "number", tip: "Nomor urut KPI.", result: "Mengurutkan baris tabel KPI." },
+      { name: "kpi", label: "Nama KPI", type: "text", tip: "Nama indikator.", result: "Judul baris KPI." },
+      { name: "def", label: "Definisi", type: "text", hideInTable: true, tip: "Definisi / cara ukur KPI.", result: "Penjelasan KPI di tabel." },
+      { name: "pic", label: "PIC", type: "text", hideInTable: true, tip: "Penanggung jawab KPI.", result: "Akuntabilitas pencapaian." },
+      { name: "upd", label: "Update", type: "text", hideInTable: true, tip: "Frekuensi update (mis. Mingguan).", result: "Konteks kebaruan data KPI." },
+      { name: "green", label: "Ambang Hijau", type: "text", hideInTable: true, tip: "Batas nilai status hijau.", result: "Menentukan warna hijau pada KPI." },
+      { name: "yellow", label: "Ambang Kuning", type: "text", hideInTable: true, tip: "Batas nilai status kuning.", result: "Menentukan warna kuning pada KPI." },
+      { name: "red", label: "Ambang Merah", type: "text", hideInTable: true, tip: "Batas nilai status merah.", result: "Menentukan warna merah pada KPI." },
+      { name: "val", label: "Nilai Kini", type: "text", tip: "Nilai aktual terkini.", result: "Dibandingkan ambang untuk warna status." },
+      { name: "state", label: "Status", type: "select", options: KPI_STATE, tip: "Status kini KPI.", result: "Warna indikator KPI." },
     ],
   },
   {
@@ -206,12 +216,12 @@ export const RESOURCES: ResourceConfig[] = [
     title: "Early Warning",
     singular: "Trigger",
     fields: [
-      { name: "cond", label: "Kondisi", type: "text" },
-      { name: "thr", label: "Ambang Batas", type: "text" },
-      { name: "status", label: "Status", type: "select", options: TRIGGER_STATUS },
-      { name: "pic", label: "PIC", type: "text" },
-      { name: "act", label: "Tindakan Wajib", type: "text", hideInTable: true },
-      { name: "esc", label: "Eskalasi", type: "text", hideInTable: true },
+      { name: "cond", label: "Kondisi", type: "text", tip: "Kondisi pemicu peringatan.", result: "Aturan early warning yang dipantau." },
+      { name: "thr", label: "Ambang Batas", type: "text", tip: "Ambang batas pemicu.", result: "Titik di mana peringatan menyala." },
+      { name: "status", label: "Status", type: "select", options: TRIGGER_STATUS, tip: "Tingkat keparahan trigger.", result: "Warna & prioritas peringatan." },
+      { name: "pic", label: "PIC", type: "text", tip: "Penanggung jawab respons.", result: "Akuntabilitas tindakan." },
+      { name: "act", label: "Tindakan Wajib", type: "text", hideInTable: true, tip: "Tindakan wajib bila terpicu.", result: "Langkah respons tercatat." },
+      { name: "esc", label: "Eskalasi", type: "text", hideInTable: true, tip: "Jalur eskalasi (kepada siapa).", result: "Tujuan eskalasi bila tak tertangani." },
     ],
   },
 ];

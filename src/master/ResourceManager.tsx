@@ -170,7 +170,13 @@ function RecordForm({
         <div className="mdf-body">
           {config.idEditable && !editing && (
             <Field
-              def={{ name: "id", label: config.idLabel ?? "ID", type: "text" }}
+              def={{
+                name: "id",
+                label: config.idLabel ?? "ID",
+                type: "text",
+                tip: config.idTip ?? "Kunci unik record.",
+                result: "Dipakai sebagai identitas; tidak bisa diubah setelah dibuat.",
+              }}
               value={values.id ?? ""}
               onChange={set}
             />
@@ -206,7 +212,27 @@ function Field({
 }) {
   return (
     <label className={`mdf-field ${def.type === "textarea" ? "wide" : ""}`}>
-      <span>{def.label}</span>
+      <span className="mdf-label">
+        {def.label}
+        {def.tip && (
+          <span
+            className="mdf-tip"
+            tabIndex={0}
+            title={def.tip + (def.result ? "\n\nHasil: " + def.result : "")}
+          >
+            <span className="mdf-tip-i">i</span>
+            <span className="mdf-tip-pop" role="tooltip">
+              <b>{def.label}</b>
+              <span>{def.tip}</span>
+              {def.result && (
+                <span className="mdf-tip-res">
+                  <b>Hasil:</b> {def.result}
+                </span>
+              )}
+            </span>
+          </span>
+        )}
+      </span>
       {def.type === "select" ? (
         <select value={value} onChange={(e) => onChange(def.name, e.target.value)}>
           <option value="">— pilih —</option>
