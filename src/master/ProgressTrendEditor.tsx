@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { api, ApiError } from "../api/client";
 import type { ProgressTrend } from "../types";
+import { ImportButton } from "./ImportData";
 
 /** A single editable point — one column of the progress chart. */
 interface Row {
@@ -41,6 +42,18 @@ export function ProgressTrendEditor() {
 
   const removeRow = (i: number) => setRows((rs) => rs.filter((_, idx) => idx !== i));
 
+  // Import replaces the whole trend (it is a single series, not a collection).
+  const importRows = async (data: Record<string, unknown>[]): Promise<number> => {
+    const num = (v: unknown) => (v == null || v === "" ? 0 : Number(v));
+    const next = await api.updateProgressTrend({
+      weeks: data.map((r, i) => String(r.week ?? `W${i + 1}`).trim() || `W${i + 1}`),
+      plan: data.map((r) => num(r.plan)),
+      actual: data.map((r) => num(r.actual)),
+    });
+    setRows(toRows(next));
+    return next.weeks.length;
+  };
+
   const save = async () => {
     setSaving(true);
     setError("");
@@ -62,9 +75,24 @@ export function ProgressTrendEditor() {
           <h2>Progress Control</h2>
           <span className="md-count">Rencana vs Realisasi · {rows.length} minggu</span>
         </div>
-        <button className="md-btn" onClick={addRow} disabled={loading}>
-          ＋ Tambah Minggu
-        </button>
+        <div className="md-head-actions">
+          <ImportButton
+            entity="progress-trend"
+            columns={["week", "plan", "actual"]}
+            sample={
+              rows.length
+                ? rows.map((r) => ({ week: r.week, plan: r.plan, actual: r.actual }))
+                : [
+                    { week: "W1", plan: 18, actual: 17 },
+                    { week: "W2", plan: 24, actual: 23 },
+                  ]
+            }
+            onImport={importRows}
+          />
+          <button className="md-btn" onClick={addRow} disabled={loading}>
+            ＋ Tambah Minggu
+          </button>
+        </div>
       </header>
 
       {error && <div className="md-error">{error}</div>}

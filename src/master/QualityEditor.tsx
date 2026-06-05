@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { api, ApiError } from "../api/client";
 import type { Quality } from "../types";
+import { ImportJsonButton } from "./ImportData";
 
 /** Numeric headline metrics of the quality singleton, in display order. */
 const METRICS: { key: keyof Quality; label: string }[] = [
@@ -86,6 +87,13 @@ export function QualityEditor() {
     }
   };
 
+  // Import replaces the whole quality singleton (nested object → JSON).
+  const importQuality = async (data: unknown): Promise<number> => {
+    const next = await api.updateQuality(data as Quality);
+    setQ(next);
+    return 1;
+  };
+
   if (loading) return <div className="md-panel"><div className="md-empty">Memuat…</div></div>;
   if (!q) return <div className="md-panel"><div className="md-error">{error || "Gagal memuat."}</div></div>;
 
@@ -95,6 +103,9 @@ export function QualityEditor() {
         <div>
           <h2>Mutu &amp; Defect</h2>
           <span className="md-count">Quality summary · {q.categories.length} kategori · {q.highRisk.length} unit risiko</span>
+        </div>
+        <div className="md-head-actions">
+          <ImportJsonButton entity="quality" sample={q} onImport={importQuality} />
         </div>
       </header>
 

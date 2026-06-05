@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { ApiError } from "../api/client";
 import type { MetaItem, Tone } from "../types";
+import { ImportButton } from "./ImportData";
 
 const TONES: Tone[] = ["green", "yellow", "orange", "red", "neutral", "crisis"];
 
@@ -10,6 +11,7 @@ const TONES: Tone[] = ["green", "yellow", "orange", "red", "neutral", "crisis"];
  * form rather than the per-row CRUD of ResourceManager.
  */
 export function MetaListEditor({
+  entity,
   title,
   subtitle,
   load: loadFn,
@@ -17,6 +19,7 @@ export function MetaListEditor({
   /** Which optional column to surface: "note" (vendor) or "sla" (complaint). */
   extra,
 }: {
+  entity: string;
   title: string;
   subtitle: string;
   load: () => Promise<MetaItem[]>;
@@ -46,6 +49,20 @@ export function MetaListEditor({
     setRows((rs) => [...rs, { key: "", label: "", tone: "neutral", note: "", sla: "" }]);
   const removeRow = (i: number) => setRows((rs) => rs.filter((_, idx) => idx !== i));
 
+  // Import replaces the whole classification list.
+  const importRows = async (data: Record<string, unknown>[]): Promise<number> => {
+    const items: MetaItem[] = data.map((r) => ({
+      key: String(r.key ?? "").trim(),
+      label: String(r.label ?? ""),
+      tone: (String(r.tone ?? "neutral") as Tone),
+      note: r.note != null ? String(r.note) : "",
+      sla: r.sla != null ? String(r.sla) : "",
+    }));
+    const next = await saveFn(items);
+    setRows(next);
+    return next.length;
+  };
+
   const save = async () => {
     setSaving(true);
     setError("");
@@ -71,9 +88,21 @@ export function MetaListEditor({
           <h2>{title}</h2>
           <span className="md-count">{subtitle} · {rows.length} item</span>
         </div>
-        <button className="md-btn" onClick={addRow} disabled={loading}>
-          ＋ Tambah Item
-        </button>
+        <div className="md-head-actions">
+          <ImportButton
+            entity={entity}
+            columns={["key", "label", "tone", extra]}
+            sample={
+              (rows.length
+                ? rows
+                : [{ key: "contoh", label: "Contoh", tone: "neutral", [extra]: "" }]) as Record<string, unknown>[]
+            }
+            onImport={importRows}
+          />
+          <button className="md-btn" onClick={addRow} disabled={loading}>
+            ＋ Tambah Item
+          </button>
+        </div>
       </header>
 
       {error && <div className="md-error">{error}</div>}

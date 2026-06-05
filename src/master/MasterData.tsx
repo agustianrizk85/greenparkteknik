@@ -20,6 +20,7 @@ const SINGLETONS: { key: string; title: string; render: () => ReactNode }[] = [
     title: "Status Vendor (Meta)",
     render: () => (
       <MetaListEditor
+        entity="vendor-status-meta"
         title="Status Vendor"
         subtitle="Klasifikasi kontraktor"
         extra="note"
@@ -33,6 +34,7 @@ const SINGLETONS: { key: string; title: string; render: () => ReactNode }[] = [
     title: "Level Komplain (Meta)",
     render: () => (
       <MetaListEditor
+        entity="complaint-meta"
         title="Level Komplain"
         subtitle="Klasifikasi + SLA"
         extra="sla"

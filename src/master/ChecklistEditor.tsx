@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { api, ApiError } from "../api/client";
+import { ImportButton } from "./ImportData";
 
 /** Editor for the site-readiness checklist — an ordered list of strings. */
 export function ChecklistEditor() {
@@ -34,6 +35,16 @@ export function ChecklistEditor() {
       return next;
     });
 
+  // Import replaces the whole checklist.
+  const importRows = async (data: Record<string, unknown>[]): Promise<number> => {
+    const items = data
+      .map((r) => String(r.item ?? Object.values(r)[0] ?? "").trim())
+      .filter((s) => s !== "");
+    const next = await api.updateSiteChecklist(items);
+    setRows(next);
+    return next.length;
+  };
+
   const save = async () => {
     setSaving(true);
     setError("");
@@ -57,9 +68,21 @@ export function ChecklistEditor() {
           <h2>Site Checklist</h2>
           <span className="md-count">Item kesiapan site · {rows.length} item</span>
         </div>
-        <button className="md-btn" onClick={addRow} disabled={loading}>
-          ＋ Tambah Item
-        </button>
+        <div className="md-head-actions">
+          <ImportButton
+            entity="site-checklist"
+            columns={["item"]}
+            sample={
+              rows.length
+                ? rows.map((r) => ({ item: r }))
+                : [{ item: "Akses utama layak, tidak terhalang material" }]
+            }
+            onImport={importRows}
+          />
+          <button className="md-btn" onClick={addRow} disabled={loading}>
+            ＋ Tambah Item
+          </button>
+        </div>
       </header>
 
       {error && <div className="md-error">{error}</div>}

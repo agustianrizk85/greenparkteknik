@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api, ApiError } from "../api/client";
 import type { FieldDef, ResourceConfig } from "./schema";
+import { ImportButton } from "./ImportData";
 
 type MasterRecord = Record<string, unknown> & { id: string };
 type FormValues = Record<string, string>;
@@ -46,6 +47,18 @@ export function ResourceManager({ config }: { config: ResourceConfig }) {
     }
   };
 
+  // Bulk import: create each record in the imported array, then refresh.
+  const importItems = async (data: unknown): Promise<number> => {
+    const arr = data as Record<string, unknown>[];
+    let n = 0;
+    for (const raw of arr) {
+      await api.create(config.key, normalizeRecord(config, raw));
+      n++;
+    }
+    load();
+    return n;
+  };
+
   return (
     <div className="md-panel">
       <header className="md-head">
@@ -53,9 +66,17 @@ export function ResourceManager({ config }: { config: ResourceConfig }) {
           <h2>{config.title}</h2>
           <span className="md-count">{items.length} data</span>
         </div>
-        <button className="md-btn primary" onClick={openCreate}>
-          ＋ Tambah {config.singular}
-        </button>
+        <div className="md-head-actions">
+          <ImportButton
+            entity={config.key}
+            columns={importColumns(config)}
+            sample={[sampleRecord(config)]}
+            onImport={importItems}
+          />
+          <button className="md-btn primary" onClick={openCreate}>
+            ＋ Tambah {config.singular}
+          </button>
+        </div>
       </header>
 
       {error && <div className="md-error">{error}</div>}
@@ -280,4 +301,40 @@ function buildPayload(config: ResourceConfig, editing: MasterRecord | null, valu
     else payload[f.name] = raw;
   }
   return payload;
+}
+
+/* ---- Import helpers ---------------------------------------------------- */
+
+/** Ordered column keys for the CSV template (id first when user-editable). */
+function importColumns(config: ResourceConfig): string[] {
+  return [...(config.idEditable ? ["id"] : []), ...config.fields.map((f) => f.name)];
+}
+
+/** A blank record matching the schema — used as the import template/sample. */
+function sampleRecord(config: ResourceConfig): Record<string, unknown> {
+  const rec: Record<string, unknown> = {};
+  if (config.idEditable) rec.id = "";
+  for (const f of config.fields) {
+    rec[f.name] =
+      f.type === "number" ? 0 : f.type === "tags" ? [] : f.type === "select" ? f.options?.[0]?.value ?? "" : "";
+  }
+  return rec;
+}
+
+/** Coerce one imported record to the field types the API expects. */
+function normalizeRecord(config: ResourceConfig, raw: Record<string, unknown>): Record<string, unknown> {
+  const rec: Record<string, unknown> = {};
+  if (config.idEditable && raw.id != null && String(raw.id).trim() !== "") rec.id = String(raw.id).trim();
+  for (const f of config.fields) {
+    const v = raw[f.name];
+    if (f.type === "number") rec[f.name] = v == null || v === "" ? 0 : Number(v);
+    else if (f.type === "tags")
+      rec[f.name] = Array.isArray(v)
+        ? v.map((s) => String(s))
+        : typeof v === "string"
+          ? v.split(",").map((s) => s.trim()).filter(Boolean)
+          : [];
+    else rec[f.name] = v == null ? "" : String(v);
+  }
+  return rec;
 }
