@@ -20,6 +20,7 @@ import { FOCUS_META, ProjectDetail } from "./components/focus";
 import { useAuth } from "./auth/AuthContext";
 import { Login } from "./components/Login";
 import { MasterData } from "./master/MasterData";
+import { ProsesBisnis } from "./components/ProsesBisnis";
 
 interface TabDef {
   id: string;
@@ -38,6 +39,7 @@ const TABS: TabDef[] = [
   { id: "ai", label: "AI & Decision", icon: "cpu" },
   { id: "kpi", label: "KPI", icon: "trend" },
   { id: "triggers", label: "Early Warning", icon: "filter" },
+  { id: "proses", label: "Proses Bisnis", icon: "rec" },
   { id: "master", label: "Master Data", icon: "db" },
 ];
 
@@ -145,6 +147,8 @@ function Dashboard({ D }: { D: DashboardData }) {
       <div className="body">
         {tab === "master" ? (
           <MasterData />
+        ) : tab === "proses" ? (
+          <ProsesBisnis />
         ) : tab === "overview" ? (
           <Overview data={data} openFocus={openFocus} openProject={openProject} />
         ) : (
