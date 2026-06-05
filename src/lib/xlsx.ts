@@ -229,3 +229,133 @@ export function downloadXlsx(filename: string, columns: string[], rows: Cell[][]
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
+
+/* ======================================================================= *
+ * .xlsx READER — parse a real Excel file (store or DEFLATE) into a matrix. *
+ * Uses the browser/Node DecompressionStream for DEFLATE; no dependency.    *
+ * ======================================================================= */
+
+function unescapeXml(s: string): string {
+  return s
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&#39;/g, "'")
+    .replace(/&#10;/g, "\n")
+    .replace(/&amp;/g, "&");
+}
+
+function colToIndex(ref: string): number {
+  const m = ref.match(/^([A-Z]+)/);
+  if (!m) return 0;
+  let n = 0;
+  for (const ch of m[1]) n = n * 26 + (ch.charCodeAt(0) - 64);
+  return n - 1;
+}
+
+async function inflateRaw(comp: Uint8Array): Promise<Uint8Array> {
+  const ds = new DecompressionStream("deflate-raw");
+  const stream = new Blob([comp.buffer.slice(comp.byteOffset, comp.byteOffset + comp.byteLength) as ArrayBuffer])
+    .stream()
+    .pipeThrough(ds);
+  return new Uint8Array(await new Response(stream).arrayBuffer());
+}
+
+/** Read a ZIP archive (store + deflate) into name → bytes. */
+async function unzip(buf: Uint8Array): Promise<Map<string, Uint8Array>> {
+  const dv = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
+  let eocd = -1;
+  for (let i = buf.length - 22; i >= 0; i--) {
+    if (dv.getUint32(i, true) === 0x06054b50) {
+      eocd = i;
+      break;
+    }
+  }
+  if (eocd < 0) throw new Error("File bukan .xlsx/zip yang valid.");
+  const count = dv.getUint16(eocd + 10, true);
+  let off = dv.getUint32(eocd + 16, true);
+  const out = new Map<string, Uint8Array>();
+  const dec = new TextDecoder();
+  for (let i = 0; i < count; i++) {
+    if (dv.getUint32(off, true) !== 0x02014b50) break;
+    const method = dv.getUint16(off + 10, true);
+    const compSize = dv.getUint32(off + 20, true);
+    const fnLen = dv.getUint16(off + 28, true);
+    const extraLen = dv.getUint16(off + 30, true);
+    const commentLen = dv.getUint16(off + 32, true);
+    const localOff = dv.getUint32(off + 42, true);
+    const name = dec.decode(buf.subarray(off + 46, off + 46 + fnLen));
+    const lfnLen = dv.getUint16(localOff + 26, true);
+    const lextraLen = dv.getUint16(localOff + 28, true);
+    const dataStart = localOff + 30 + lfnLen + lextraLen;
+    const comp = buf.subarray(dataStart, dataStart + compSize);
+    out.set(name, method === 0 ? comp : await inflateRaw(comp));
+    off += 46 + fnLen + extraLen + commentLen;
+  }
+  return out;
+}
+
+function parseSharedStrings(xml: string): string[] {
+  const out: string[] = [];
+  const siRe = /<si>([\s\S]*?)<\/si>/g;
+  let m: RegExpExecArray | null;
+  while ((m = siRe.exec(xml))) {
+    const body = m[1].replace(/<rPh[\s\S]*?<\/rPh>/g, "");
+    const texts = [...body.matchAll(/<t[^>]*>([\s\S]*?)<\/t>/g)].map((x) => unescapeXml(x[1]));
+    out.push(texts.join(""));
+  }
+  return out;
+}
+
+function parseSheet(xml: string, shared: string[]): string[][] {
+  const rows: string[][] = [];
+  const rowRe = /<row[^>]*>([\s\S]*?)<\/row>/g;
+  let rm: RegExpExecArray | null;
+  while ((rm = rowRe.exec(xml))) {
+    const cells: string[] = [];
+    const cellRe = /<c\b([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g;
+    let cm: RegExpExecArray | null;
+    while ((cm = cellRe.exec(rm[1]))) {
+      const attrs = cm[1];
+      const inner = cm[2] ?? "";
+      const ref = (attrs.match(/r="([A-Z]+\d+)"/) || [])[1] || "";
+      const col = ref ? colToIndex(ref) : cells.length;
+      const t = (attrs.match(/t="([^"]+)"/) || [])[1] || "n";
+      let val = "";
+      if (t === "s") {
+        const idx = Number((inner.match(/<v>([\s\S]*?)<\/v>/) || [])[1]);
+        val = shared[idx] ?? "";
+      } else if (t === "inlineStr") {
+        val = unescapeXml((inner.match(/<t[^>]*>([\s\S]*?)<\/t>/) || [])[1] || "");
+      } else {
+        val = unescapeXml((inner.match(/<v>([\s\S]*?)<\/v>/) || [])[1] || "");
+      }
+      cells[col] = val;
+    }
+    for (let i = 0; i < cells.length; i++) if (cells[i] === undefined) cells[i] = "";
+    rows.push(cells);
+  }
+  return rows;
+}
+
+/** Parse a real .xlsx file (first worksheet) into a matrix of cell strings. */
+export async function parseXlsx(buf: ArrayBuffer): Promise<string[][]> {
+  const files = await unzip(new Uint8Array(buf));
+  const dec = new TextDecoder();
+  const sharedRaw = files.get("xl/sharedStrings.xml");
+  const shared = sharedRaw ? parseSharedStrings(dec.decode(sharedRaw)) : [];
+  let sheetKey = "xl/worksheets/sheet1.xml";
+  if (!files.has(sheetKey)) {
+    for (const k of files.keys()) {
+      if (/^xl\/worksheets\/.*\.xml$/.test(k)) {
+        sheetKey = k;
+        break;
+      }
+    }
+  }
+  const sheetRaw = files.get(sheetKey);
+  if (!sheetRaw) throw new Error("Worksheet tidak ditemukan dalam file Excel.");
+  const matrix = parseSheet(dec.decode(sheetRaw), shared);
+  return matrix.filter((r) => r.some((c) => (c ?? "").trim() !== ""));
+}

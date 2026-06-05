@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { csvToRecords, download, parseCSV, toCSV } from "../lib/csv";
+import { csvToRecords, download } from "../lib/csv";
+import { downloadXlsx, parseXlsx } from "../lib/xlsx";
 
 type Rec = Record<string, unknown>;
 
@@ -29,72 +30,61 @@ export function ImportButton({
 
   const downloadTemplate = () => {
     const rows = sample.map((r) => columns.map((c) => cellText(r[c])));
-    download(`${entity}-contoh.csv`, toCSV(columns, rows));
+    // Real .xlsx so each header lands in its own column (not a comma CSV).
+    downloadXlsx(`${entity}-contoh`, columns, rows);
   };
 
   return (
     <>
-      <button className="md-btn" onClick={downloadTemplate} title="Unduh contoh format (buka di Excel)">
+      <button className="md-btn" onClick={downloadTemplate} title="Unduh contoh Excel (.xlsx, per kolom)">
         ⬇ Contoh (Excel)
       </button>
       <button className="md-btn" onClick={() => setOpen(true)} title="Impor dari CSV / Excel / JSON">
         ⭱ Import
       </button>
-      {open && <ImportDialog columns={columns} sample={sample} onImport={onImport} onClose={() => setOpen(false)} />}
+      {open && <ImportDialog columns={columns} onImport={onImport} onClose={() => setOpen(false)} />}
     </>
   );
 }
 
 function ImportDialog({
   columns,
-  sample,
   onImport,
   onClose,
 }: {
   columns: string[];
-  sample: Rec[];
   onImport: (rows: Rec[]) => Promise<number>;
   onClose: () => void;
 }) {
-  const [text, setText] = useState("");
+  const [rows, setRows] = useState<Rec[] | null>(null);
+  const [info, setInfo] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [done, setDone] = useState<number | null>(null);
 
-  const onFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const onFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => setText(String(reader.result ?? ""));
-    reader.onerror = () => setError("Gagal membaca berkas.");
-    reader.readAsText(file);
-  };
-
-  const fillSample = () => {
-    const rows = sample.map((r) => columns.map((c) => cellText(r[c])));
-    setText(toCSV(columns, rows).replace(/^﻿/, ""));
-  };
-
-  const parseInput = (raw: string): Rec[] => {
-    const trimmed = raw.trim();
-    if (trimmed.startsWith("[") || trimmed.startsWith("{")) {
-      const json = JSON.parse(trimmed);
-      return Array.isArray(json) ? json : [json];
+    setError("");
+    setRows(null);
+    setInfo("");
+    if (!/\.xlsx$/i.test(file.name)) {
+      setError("Hanya file Excel (.xlsx). Unduh dulu lewat tombol Contoh (Excel).");
+      return;
     }
-    return csvToRecords(parseCSV(raw));
+    try {
+      const recs = csvToRecords(await parseXlsx(await file.arrayBuffer()));
+      setRows(recs);
+      setInfo(`✓ ${recs.length} baris terbaca dari Excel.`);
+    } catch (err) {
+      setError("Gagal membaca Excel: " + (err instanceof Error ? err.message : String(err)));
+    }
   };
 
   const submit = async () => {
     setError("");
-    let rows: Rec[];
-    try {
-      rows = parseInput(text);
-    } catch (e) {
-      setError("Format tidak valid (CSV atau JSON): " + (e instanceof Error ? e.message : String(e)));
-      return;
-    }
-    if (rows.length === 0) {
-      setError("Tidak ada baris data yang terbaca.");
+    if (!rows || rows.length === 0) {
+      setError("Pilih file Excel (.xlsx) dulu.");
       return;
     }
     setBusy(true);
@@ -136,22 +126,17 @@ function ImportDialog({
                 Kolom: <b>{columns.join(", ")}</b>
               </div>
               <label className="mdf-field wide">
-                <span>Berkas CSV / Excel (.csv) atau JSON</span>
-                <input type="file" accept=".csv,.json,text/csv,application/json" onChange={onFile} />
+                <span>Berkas Excel (.xlsx)</span>
+                <input type="file" accept=".xlsx" onChange={onFile} />
               </label>
-              <label className="mdf-field wide">
-                <span>atau tempel data di sini</span>
-                <textarea
-                  rows={10}
-                  value={text}
-                  onChange={(e) => setText(e.target.value)}
-                  placeholder={columns.join(",") + "\n…"}
-                  style={{ fontFamily: "var(--font-mono)", fontSize: 12 }}
-                />
-              </label>
-              <button type="button" className="md-btn" onClick={fillSample}>
-                Isi contoh format
-              </button>
+              {info && (
+                <div className="md-count" style={{ color: "var(--green-600)" }}>
+                  {info}
+                </div>
+              )}
+              <div className="md-count" style={{ fontSize: 11 }}>
+                Unduh <b>⬇ Contoh (Excel)</b>, isi di Excel, lalu unggah file <b>.xlsx</b> di sini.
+              </div>
             </>
           )}
         </div>
@@ -163,7 +148,7 @@ function ImportDialog({
             {done !== null ? "Tutup" : "Batal"}
           </button>
           {done === null && (
-            <button type="submit" className="md-btn primary" disabled={busy || text.trim() === ""}>
+            <button type="submit" className="md-btn primary" disabled={busy || !rows}>
               {busy ? "Mengimpor…" : "Import"}
             </button>
           )}
