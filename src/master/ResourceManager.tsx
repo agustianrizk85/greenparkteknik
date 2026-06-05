@@ -1,10 +1,25 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api, ApiError } from "../api/client";
+import { downloadXlsx } from "../lib/xlsx";
+import type { Cell } from "../lib/xlsx";
 import type { FieldDef, ResourceConfig } from "./schema";
 import { ImportButton } from "./ImportData";
 
 type MasterRecord = Record<string, unknown> & { id: string };
 type FormValues = Record<string, string>;
+
+/** Map a record field to an Excel cell (numbers numeric; selects → label). */
+function exportCell(f: FieldDef, rec: MasterRecord): Cell {
+  const v = rec[f.name];
+  if (v === null || v === undefined || v === "") return "";
+  if (f.type === "tags") return Array.isArray(v) ? v.join(", ") : String(v);
+  if (f.type === "number") return typeof v === "number" ? v : Number(v);
+  if (f.type === "select" && f.options) {
+    const opt = f.options.find((o) => o.value === v);
+    return opt ? opt.label : String(v);
+  }
+  return String(v);
+}
 
 /** Generic create/read/update/delete manager for one master-data resource. */
 export function ResourceManager({ config }: { config: ResourceConfig }) {
@@ -59,6 +74,14 @@ export function ResourceManager({ config }: { config: ResourceConfig }) {
     return n;
   };
 
+  // Export the current resource to a real .xlsx (bold/frozen header + autofilter).
+  const onExport = () => {
+    const fields = config.fields;
+    const columns = ["ID", ...fields.map((f) => f.label)];
+    const body: Cell[][] = items.map((rec) => [rec.id, ...fields.map((f) => exportCell(f, rec))]);
+    downloadXlsx(`Teknik-${config.title}`, columns, body, config.title.slice(0, 31));
+  };
+
   return (
     <div className="md-panel">
       <header className="md-head">
@@ -67,6 +90,9 @@ export function ResourceManager({ config }: { config: ResourceConfig }) {
           <span className="md-count">{items.length} data</span>
         </div>
         <div className="md-head-actions">
+          <button className="md-btn" onClick={onExport} disabled={items.length === 0} title="Unduh sebagai file Excel (.xlsx)">
+            ▦ Excel
+          </button>
           <ImportButton
             entity={config.key}
             columns={importColumns(config)}
