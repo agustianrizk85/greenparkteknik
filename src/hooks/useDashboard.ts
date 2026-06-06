@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "../api/client";
-import { toMap } from "../lib/status";
 import type { DashboardData } from "../types";
 
 type State =
@@ -8,7 +7,7 @@ type State =
   | { status: "ready"; data: DashboardData; error: null }
   | { status: "error"; data: null; error: string };
 
-/** Fetch the dashboard payload and enrich it with meta lookup maps. */
+/** Fetch the derived dashboard payload. */
 export function useDashboard(): [State, () => void] {
   const [state, setState] = useState<State>({ status: "loading", data: null, error: null });
 
@@ -16,14 +15,7 @@ export function useDashboard(): [State, () => void] {
     setState({ status: "loading", data: null, error: null });
     api
       .dashboard()
-      .then((d) => {
-        const enriched: DashboardData = {
-          ...d,
-          vendorStatusMap: toMap(d.vendorStatusMeta),
-          complaintMap: toMap(d.complaintMeta),
-        };
-        setState({ status: "ready", data: enriched, error: null });
-      })
+      .then((d) => setState({ status: "ready", data: d, error: null }))
       .catch((err: unknown) => {
         setState({ status: "error", data: null, error: err instanceof Error ? err.message : String(err) });
       });

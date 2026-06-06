@@ -7,15 +7,15 @@ interface Step {
 }
 
 const FLOW: Step[] = [
-  { n: 1, title: "Input Master Data", desc: "Isi data dasar di tab Master Data: Proyek, Kontraktor, Komplain, Site/Handover, AI Insight, Decision, KPI, Early Warning. Bisa input manual atau impor file Excel (.xlsx)." },
-  { n: 2, title: "Pantau Progres Proyek", desc: "Tiap proyek dibandingkan Baseline (rencana) vs Actual (realisasi). Selisihnya menentukan status On Track / At Risk / Off Track dan keterlambatan (delay)." },
-  { n: 3, title: "Nilai Performa Kontraktor", desc: "Kontraktor dinilai dari pass rate QC, frekuensi telat, dan defect berulang → menghasilkan keputusan vendor (Preferred sampai Blacklist)." },
-  { n: 4, title: "Kelola Mutu & Komplain", desc: "Defect dan komplain konsumen dicatat dengan level, SLA respon/lapangan, dan risiko publik. Komplain Critical jadi sorotan KPI." },
-  { n: 5, title: "Cek Kesiapan Site & Handover", desc: "Skor kesiapan (0–100) per proyek/unit sebelum mulai bangun & serah terima, beserta gap utama yang harus dibereskan." },
-  { n: 6, title: "KPI & Early Warning", desc: "KPI memantau indikator kunci dengan ambang Hijau/Kuning/Merah. Trigger early-warning menyala saat ambang terlampaui dan menentukan jalur eskalasi." },
-  { n: 7, title: "AI & Decision", desc: "Insight otomatis dan daftar keputusan kritis membantu CEO mengambil tindakan cepat berdasarkan data di atas." },
-  { n: 8, title: "Cek List Progress (Bobot Tahap)", desc: "Tiap unit punya 17 tahap pembangunan berbobot (Termin 1–4). Centang tahap yang selesai → persentase progres unit otomatis (Σ bobot tahap tercentang). Bobot diatur di Master Data → Tahap Pembangunan, data unit bisa diimpor dari Excel." },
-  { n: 9, title: "Kurva S & Deviasi", desc: "Master Bobot Pekerjaan + bobot mingguan (20 minggu) jadi baseline Kurva S. Progres mingguan unit dibandingkan target → deviasi, status (Sangat Cepat…Critical Delay), SPI, dan forecast keterlambatan. Deviasi ≤ −5% wajib Recovery Plan." },
+  { n: 1, title: "Akad → SPK", desc: "Setelah akad & TTD gambar kerja konsumen, SPK terbit untuk kontraktor. Data unit (No. Induk, Proyek, Blok, Tgl SPK, status kavling) dicatat di Master Data / impor Excel." },
+  { n: 2, title: "Input Master Data", desc: "Isi data dasar di tab Master Data: Proyek, Kontraktor, Tahap Pembangunan & bobot, Unit Progress, Site/Handover (BAST), KPI, Bobot Pekerjaan & Kurva S Mingguan. Bisa input manual atau impor file Excel (.xlsx)." },
+  { n: 3, title: "Monitoring Progress Unit (Cek List Progress)", desc: "Tiap unit punya 17 tahap pembangunan berbobot (Termin 1–4). Centang tahap yang selesai → persentase progres unit otomatis (Σ bobot tahap tercentang). Bobot diatur di Master Data → Tahap Pembangunan." },
+  { n: 4, title: "Pantau Progres Proyek", desc: "Tiap proyek dibandingkan Baseline (rencana) vs Actual (realisasi). Selisihnya menentukan status On Track / At Risk / Off Track dan keterlambatan (delay)." },
+  { n: 5, title: "Nilai Performa Kontraktor", desc: "Kontraktor dinilai dari pass rate QC, frekuensi telat, dan defect berulang → menghasilkan keputusan vendor (Preferred sampai Blacklist)." },
+  { n: 6, title: "Quality Control (Mutu & Defect)", desc: "Verifikasi progres fisik & defect: QC pass rate, defect terbuka/berulang, aging, kategori defect, dan unit berisiko tinggi." },
+  { n: 7, title: "Kurva S & Deviasi", desc: "Master Bobot Pekerjaan + bobot mingguan (20 minggu) jadi baseline Kurva S. Progres mingguan unit dibandingkan target → deviasi, status (Sangat Cepat…Critical Delay), SPI, dan forecast keterlambatan. Deviasi ≤ −5% wajib Recovery Plan." },
+  { n: 8, title: "Kesiapan BAST (Site & Handover)", desc: "Skor kesiapan (0–100) per proyek/unit sebelum mulai bangun & serah terima (BAST), beserta gap utama yang harus dibereskan." },
+  { n: 9, title: "KPI Direksi", desc: "KPI memantau indikator kunci (SPI, deviasi, on-time, QC) dengan ambang Hijau/Kuning/Merah sebagai alat kontrol pimpinan." },
 ];
 
 const TOOLS = [

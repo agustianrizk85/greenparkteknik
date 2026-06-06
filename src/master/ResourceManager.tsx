@@ -31,6 +31,37 @@ export function ResourceManager({ config }: { config: ResourceConfig }) {
 
   const columns = useMemo(() => config.fields.filter((f) => !f.hideInTable), [config]);
 
+  // Related resources referenced by any "ref" field — loaded so we can show
+  // human labels in the table and offer dropdowns in the form.
+  const refResources = useMemo(
+    () => [...new Set(config.fields.filter((f) => f.type === "ref" && f.refResource).map((f) => f.refResource as string))],
+    [config],
+  );
+  const [refData, setRefData] = useState<Record<string, MasterRecord[]>>({});
+  useEffect(() => {
+    let alive = true;
+    Promise.all(
+      refResources.map((r) =>
+        api.list<MasterRecord>(r).then((d) => [r, d] as const).catch(() => [r, [] as MasterRecord[]] as const),
+      ),
+    ).then((pairs) => {
+      if (alive) setRefData(Object.fromEntries(pairs));
+    });
+    return () => {
+      alive = false;
+    };
+  }, [refResources]);
+
+  const refLabel = useCallback(
+    (f: FieldDef, value: unknown): string => {
+      const list = refData[f.refResource ?? ""] ?? [];
+      const hit = list.find((r) => String(r.id) === String(value));
+      if (hit) return String(hit[f.refLabelField ?? "id"] ?? hit.id);
+      return value === null || value === undefined ? "" : String(value);
+    },
+    [refData],
+  );
+
   const load = useCallback(() => {
     setLoading(true);
     setError("");
@@ -126,7 +157,7 @@ export function ResourceManager({ config }: { config: ResourceConfig }) {
               {items.map((rec) => (
                 <tr key={rec.id}>
                   {columns.map((c) => (
-                    <td key={c.name}>{cellText(rec[c.name])}</td>
+                    <td key={c.name}>{c.type === "ref" ? refLabel(c, rec[c.name]) : cellText(rec[c.name])}</td>
                   ))}
                   <td className="md-actions">
                     <button className="md-btn" onClick={() => openEdit(rec)}>
@@ -147,6 +178,7 @@ export function ResourceManager({ config }: { config: ResourceConfig }) {
         <RecordForm
           config={config}
           editing={editing}
+          refData={refData}
           onClose={() => setFormOpen(false)}
           onSaved={() => {
             setFormOpen(false);
@@ -169,14 +201,21 @@ function cellText(value: unknown): string {
 function RecordForm({
   config,
   editing,
+  refData,
   onClose,
   onSaved,
 }: {
   config: ResourceConfig;
   editing: MasterRecord | null;
+  refData: Record<string, MasterRecord[]>;
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const refOptionsFor = (f: FieldDef): { value: string; label: string }[] =>
+    (refData[f.refResource ?? ""] ?? []).map((r) => ({
+      value: String(r.id),
+      label: String(r[f.refLabelField ?? "id"] ?? r.id),
+    }));
   const [values, setValues] = useState<FormValues>(() => initialValues(config, editing));
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -229,7 +268,13 @@ function RecordForm({
             />
           )}
           {config.fields.map((f) => (
-            <Field key={f.name} def={f} value={values[f.name] ?? ""} onChange={set} />
+            <Field
+              key={f.name}
+              def={f}
+              value={values[f.name] ?? ""}
+              onChange={set}
+              refOptions={f.type === "ref" ? refOptionsFor(f) : undefined}
+            />
           ))}
         </div>
 
@@ -252,10 +297,12 @@ function Field({
   def,
   value,
   onChange,
+  refOptions,
 }: {
   def: FieldDef;
   value: string;
   onChange: (name: string, value: string) => void;
+  refOptions?: { value: string; label: string }[];
 }) {
   return (
     <label className={`mdf-field ${def.type === "textarea" ? "wide" : ""}`}>
@@ -280,7 +327,24 @@ function Field({
           </span>
         )}
       </span>
-      {def.type === "select" ? (
+      {def.readOnly ? (
+        <input
+          type={def.type === "number" ? "number" : "text"}
+          value={value}
+          readOnly
+          disabled
+          title="Dihitung otomatis dari Cek List Progress — tidak bisa diubah di sini."
+        />
+      ) : def.type === "ref" ? (
+        <select value={value} onChange={(e) => onChange(def.name, e.target.value)}>
+          <option value="">— pilih —</option>
+          {(refOptions ?? []).map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+      ) : def.type === "select" ? (
         <select value={value} onChange={(e) => onChange(def.name, e.target.value)}>
           <option value="">— pilih —</option>
           {def.options?.map((o) => (
@@ -321,6 +385,7 @@ function buildPayload(config: ResourceConfig, editing: MasterRecord | null, valu
     payload.id = values.id.trim();
   }
   for (const f of config.fields) {
+    if (f.readOnly) continue; // derived server-side; never sent from the form
     const raw = values[f.name] ?? "";
     if (f.type === "number") payload[f.name] = raw === "" ? 0 : Number(raw);
     else if (f.type === "tags") payload[f.name] = raw.split(",").map((s) => s.trim()).filter(Boolean);
@@ -333,7 +398,7 @@ function buildPayload(config: ResourceConfig, editing: MasterRecord | null, valu
 
 /** Ordered column keys for the CSV template (id first when user-editable). */
 function importColumns(config: ResourceConfig): string[] {
-  return [...(config.idEditable ? ["id"] : []), ...config.fields.map((f) => f.name)];
+  return [...(config.idEditable ? ["id"] : []), ...config.fields.filter((f) => !f.readOnly).map((f) => f.name)];
 }
 
 /** A blank record matching the schema — used as the import template/sample. */
@@ -341,6 +406,7 @@ function sampleRecord(config: ResourceConfig): Record<string, unknown> {
   const rec: Record<string, unknown> = {};
   if (config.idEditable) rec.id = "";
   for (const f of config.fields) {
+    if (f.readOnly) continue; // derived server-side; not part of the import template
     rec[f.name] =
       f.type === "number" ? 0 : f.type === "tags" ? [] : f.type === "select" ? f.options?.[0]?.value ?? "" : "";
   }
@@ -352,6 +418,7 @@ function normalizeRecord(config: ResourceConfig, raw: Record<string, unknown>): 
   const rec: Record<string, unknown> = {};
   if (config.idEditable && raw.id != null && String(raw.id).trim() !== "") rec.id = String(raw.id).trim();
   for (const f of config.fields) {
+    if (f.readOnly) continue; // derived server-side; ignore any imported value
     const v = raw[f.name];
     if (f.type === "number") rec[f.name] = v == null || v === "" ? 0 : Number(v);
     else if (f.type === "tags")

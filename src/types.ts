@@ -1,165 +1,15 @@
 // Domain types mirroring the Go backend JSON contract (see backend/teknik).
+// The model is relational (docs/DATA_MODEL.md): Cluster → Proyek → Unit, with
+// SPK + Progres Mingguan transactions. The dashboard is derived analytics.
 
-/** Traffic-light health indicator. */
+/** Traffic-light health indicator (used by shared UI primitives). */
 export type Status = "green" | "yellow" | "red";
 
 /** Pill / chip colour tones supported by the stylesheet. */
 export type Tone = "green" | "yellow" | "orange" | "red" | "neutral" | "crisis";
 
-export interface Project {
-  id: string;
-  name: string;
-  units: number;
-  baseline: number;
-  actual: number;
-  gap: number;
-  delay: number;
-  day: number;
-  target: number;
-  status: Status;
-  contractor: string;
-  spv: string;
-  recovery: string;
-  decision: string;
-}
+/* ---- Construction masters + checklist ---------------------------------- */
 
-export interface Contractor {
-  id: string;
-  rank: number;
-  name: string;
-  units: number;
-  commitment: number;
-  delayFreq: number;
-  passRate: number;
-  repeat: number;
-  takeover: number;
-  retensi: number;
-  status: string;
-}
-
-/** Ordered classification item (vendor status / complaint level). */
-export interface MetaItem {
-  key: string;
-  label: string;
-  tone: Tone;
-  note?: string;
-  sla?: string;
-}
-
-export interface DefectCategory {
-  name: string;
-  count: number;
-}
-
-export interface HighRiskUnit {
-  unit: string;
-  issue: string;
-  aging: number;
-}
-
-export interface Quality {
-  passRate: number;
-  open: number;
-  closed: number;
-  repeat: number;
-  repeatRate: number;
-  agingAvg: number;
-  categories: DefectCategory[];
-  highRisk: HighRiskUnit[];
-}
-
-export type SLAState = "ok" | "due" | "overdue";
-export type PublicRisk = "high" | "med" | "low";
-
-export interface Complaint {
-  id: string;
-  unit: string;
-  issue: string;
-  level: string;
-  owner: string;
-  aging: number;
-  slaResp: SLAState;
-  slaField: SLAState;
-  publicRisk: PublicRisk;
-  next: string;
-}
-
-export interface SiteReadiness {
-  id: string;
-  project: string;
-  score: number;
-  window: string;
-  status: Status;
-  gaps: string[];
-}
-
-export interface HandoverReadiness {
-  id: string;
-  unit: string;
-  score: number;
-  window: string;
-  status: Status;
-}
-
-export interface AIInsight {
-  id: string;
-  type: string;
-  tone: string;
-  text: string;
-  icon: string;
-}
-
-export interface Decision {
-  id: string;
-  role: string;
-  tone: string;
-  text: string;
-}
-
-export interface ProgressTrend {
-  weeks: string[];
-  plan: number[];
-  actual: number[];
-}
-
-export interface KPI {
-  id: string;
-  no: number;
-  kpi: string;
-  def: string;
-  pic: string;
-  upd: string;
-  green: string;
-  yellow: string;
-  red: string;
-  val: string;
-  state: string;
-}
-
-export interface Trigger {
-  id: string;
-  cond: string;
-  thr: string;
-  status: string;
-  pic: string;
-  act: string;
-  esc: string;
-}
-
-export interface Summary {
-  totalProject: number;
-  totalUnits: number;
-  overall: number;
-  onTrack: number;
-  atRisk: number;
-  offTrack: number;
-  avgDelay: number;
-  qualityScore: number;
-  complaintRisk: string;
-  critical: number;
-}
-
-/** One weighted construction stage of the operational checklist. */
 export interface ConstructionStage {
   id: string;
   no: number;
@@ -168,7 +18,6 @@ export interface ConstructionStage {
   termin: string; // T1 | T2 | T3 | T4
 }
 
-/** One housing unit's progress checklist (stage name -> completed). */
 export interface ProgressUnit {
   id: string;
   noInduk: string;
@@ -181,7 +30,6 @@ export interface ProgressUnit {
   stages: Record<string, boolean>;
 }
 
-/** One weighted work item of the Kurva S master (Master Bobot Pekerjaan). */
 export interface WorkItem {
   id: string;
   no: number;
@@ -189,7 +37,6 @@ export interface WorkItem {
   weight: number;
 }
 
-/** One week of the standard 20-week S-curve baseline. */
 export interface KurvaWeek {
   id: string;
   week: number;
@@ -197,45 +44,228 @@ export interface KurvaWeek {
   cumulative: number;
 }
 
-/** Per-unit, per-week cumulative actual-vs-target record. */
-export interface UnitWeeklyProgress {
+/* ---- Relational model -------------------------------------------------- */
+
+export interface Cluster {
+  id: string;
+  kode: string;
+  nama: string;
+}
+
+export interface Proyek {
+  id: string;
+  clusterId: string;
+  nama: string;
+  kode: string;
+  spv: string;
+}
+
+export interface Unit {
+  id: string;
+  proyekId: string;
+  blok: string;
+  type: string;
+  luasBangunan: number;
+  luasTanah: number;
+  statusKavling: string;
+}
+
+export interface Kontraktor {
+  id: string;
+  nama: string;
+}
+
+export interface Konsumen {
+  id: string;
+  nama: string;
+  telp: string;
+  email: string;
+}
+
+export interface Termin {
+  id: string;
+  no: number;
+  kode: string;
+  nama: string;
+  bobotProgres: number;
+  persenBayar: number;
+  keterangan: string;
+}
+
+export interface SPK {
+  id: string;
+  nomorSpk: string;
+  unitId: string;
+  kontraktorId: string;
+  nomorSppr: string;
+  tglTerbit: string;
+  tglMulai: string;
+  tglSelesaiTarget: string;
+  lbSpk: number;
+  hargaPerM2: number;
+  nilaiKontrak: number;
+  layout: string;
+  nominalAddendum: number;
+}
+
+export interface ProgresMingguan {
   id: string;
   unitId: string;
-  week: number;
-  actual: number;
+  mingguKe: number;
+  aktual: number;
   target: number;
+  linkFoto: string;
   updatedBy: string;
+  tglUpdate: string;
+}
+
+export interface Akad {
+  id: string;
+  unitId: string;
+  konsumenId: string;
+  tglAkad: string;
+  tglTtdGambar: string;
+}
+
+export interface BastKontraktor {
+  id: string;
+  spkId: string;
+  tglSerahTerima: string;
+  linkFoto: string;
+  linkBapp: string;
+  linkCeklis: string;
+}
+
+export interface BastKonsumen {
+  id: string;
+  unitId: string;
+  konsumenId: string;
+  tglBast: string;
+  status: string;
+  scanBerkas: string;
+}
+
+export interface Komplain {
+  id: string;
+  unitId: string;
+  tgl: string;
+  keterangan: string;
+  status: string;
+  aging: number;
+  link: string;
+}
+
+export interface Defect {
+  id: string;
+  unitId: string;
+  kategori: string;
+  status: string;
+  aging: number;
+  repeat: string;
+}
+
+export interface RecoveryPlan {
+  id: string;
+  unitId: string;
+  rootCause: string;
+  targetPercepatan: string;
+  status: string;
+}
+
+/* ---- Derived dashboard (computed by backend) --------------------------- */
+
+export interface ProyekMetric {
+  id: string;
+  nama: string;
+  clusterKode: string;
+  spv: string;
+  units: number;
+  week: number;
+  aktual: number;
+  target: number;
+  deviasi: number;
+  spi: number;
+  lateWeeks: number;
+  status: string; // Sangat Cepat..Critical Delay
+  kontraktor: string;
+}
+
+export interface KontraktorMetric {
+  id: string;
+  nama: string;
+  units: number;
+  nilai: number;
+}
+
+export interface ClusterMetric {
+  kode: string;
+  nama: string;
+  proyek: number;
+  units: number;
+  aktual: number;
+  target: number;
+  deviasi: number;
+  status: string;
+}
+
+export interface KontraktorDeviasi {
+  id: string;
+  nama: string;
+  units: number;
+  aktual: number;
+  target: number;
+  deviasi: number;
+  spi: number;
+  status: string;
+}
+
+export interface QualitySummary {
+  komplainOpen: number;
+  komplainTotal: number;
+  defectOpen: number;
+  defectTotal: number;
+  defectRepeat: number;
+}
+
+export interface KPIDireksi {
+  onTimeCompletion: number;
+  proyekOnTime: number;
+  proyekTotal: number;
+  overall: number;
+  avgSpi: number;
+  avgDeviasi: number;
+}
+
+export interface Summary {
+  totalProyek: number;
+  totalUnits: number;
+  totalSpk: number;
+  overall: number;
+  onSchedule: number;
+  warning: number;
+  critical: number;
+  avgDeviasi: number;
+  avgSpi: number;
 }
 
 /** Full payload returned by GET /api/dashboard. */
 export interface Dashboard {
-  projects: Project[];
-  contractors: Contractor[];
-  vendorStatusMeta: MetaItem[];
-  quality: Quality;
-  complaints: Complaint[];
-  complaintMeta: MetaItem[];
-  siteReadiness: SiteReadiness[];
-  handoverReadiness: HandoverReadiness[];
-  siteChecklist: string[];
-  aiInsights: AIInsight[];
-  decisions: Decision[];
-  progressTrend: ProgressTrend;
-  kpiTable: KPI[];
-  triggers: Trigger[];
+  summary: Summary;
+  proyek: ProyekMetric[];
+  kontraktor: KontraktorMetric[];
+  kurvaBaseline: KurvaWeek[];
+  overallActual: number;
+  overallWeek: number;
   constructionStages: ConstructionStage[];
   progressUnits: ProgressUnit[];
-  workItems: WorkItem[];
-  kurvaWeekly: KurvaWeek[];
-  unitWeeklyProgress: UnitWeeklyProgress[];
-  summary: Summary;
+  kpi: KPIDireksi;
+  clusterMetrics: ClusterMetric[];
+  kontraktorDeviasi: KontraktorDeviasi[];
+  quality: QualitySummary;
 }
 
-/** Dashboard enriched on the client with key->item lookup maps for the meta arrays. */
-export interface DashboardData extends Dashboard {
-  vendorStatusMap: Record<string, MetaItem>;
-  complaintMap: Record<string, MetaItem>;
-}
+/** Alias kept for components that took the enriched dashboard. */
+export type DashboardData = Dashboard;
 
 /** Authenticated operator (no password material). */
 export interface AuthUser {

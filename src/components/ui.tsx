@@ -44,17 +44,26 @@ export interface KpiProps {
   tone?: "ok" | "warn" | "bad";
   delta?: string;
   deltaDir?: "up" | "down";
+  onClick?: () => void;
+  hint?: string;
 }
 
-export function Kpi({ label, value, unit, tone, delta, deltaDir }: KpiProps) {
+export function Kpi({ label, value, unit, tone, delta, deltaDir, onClick, hint }: KpiProps) {
   return (
-    <div className={`kpi ${tone ?? ""}`}>
+    <div
+      className={`kpi ${tone ?? ""} ${onClick ? "clickable" : ""}`}
+      onClick={onClick}
+      role={onClick ? "button" : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      title={hint}
+    >
       <span className="label">{label}</span>
       <span className="val">
         {value}
         {unit && <span className="u"> {unit}</span>}
       </span>
       {delta && <span className={`delta ${deltaDir ?? ""}`}>{delta}</span>}
+      {hint && <span className="kpi-hint">{hint}</span>}
     </div>
   );
 }

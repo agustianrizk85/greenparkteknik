@@ -1,4 +1,4 @@
-import type { AuthUser, Dashboard, MetaItem, ProgressTrend, Quality } from "../types";
+import type { AuthUser, Dashboard } from "../types";
 
 /** Backend base URL — override with VITE_API_BASE at build/dev time. */
 const BASE = (import.meta.env.VITE_API_BASE ?? "http://localhost:8083") + "/api";
@@ -85,23 +85,15 @@ export const api = {
   // --- Aggregate ---
   dashboard: () => request<Dashboard>("GET", "/dashboard"),
 
-  // --- Singletons ---
-  /** Read the cumulative plan-vs-actual progress trend. */
-  progressTrend: () => request<ProgressTrend>("GET", "/progress-trend"),
-  /** Replace the whole progress trend (weeks / plan / actual). */
-  updateProgressTrend: (body: ProgressTrend) => request<ProgressTrend>("PUT", "/progress-trend", body),
-  /** Read the quality / defect summary singleton. */
-  quality: () => request<Quality>("GET", "/quality"),
-  /** Replace the quality / defect summary singleton. */
-  updateQuality: (body: Quality) => request<Quality>("PUT", "/quality", body),
-
-  // --- Reference / classification lists (read + replace whole list) ---
-  vendorStatusMeta: () => request<MetaItem[]>("GET", "/vendor-status-meta"),
-  updateVendorStatusMeta: (body: MetaItem[]) => request<MetaItem[]>("PUT", "/vendor-status-meta", body),
-  complaintMeta: () => request<MetaItem[]>("GET", "/complaint-meta"),
-  updateComplaintMeta: (body: MetaItem[]) => request<MetaItem[]>("PUT", "/complaint-meta", body),
-  siteChecklist: () => request<string[]>("GET", "/site-checklist"),
-  updateSiteChecklist: (body: string[]) => request<string[]>("PUT", "/site-checklist", body),
+  // --- AI insight (OpenRouter, server-side key) ---
+  insight: (scope: string) =>
+    request<{ configured: boolean; insight: string; model?: string }>(
+      "GET",
+      `/insight?scope=${encodeURIComponent(scope)}`,
+    ),
+  aiConfig: () => request<{ configured: boolean; model: string }>("GET", "/ai/config"),
+  aiModels: () => request<{ id: string; name: string }[]>("GET", "/ai/models"),
+  setAiModel: (model: string) => request<{ model: string }>("PUT", "/ai/model", { model }),
 
   // --- Generic master-data CRUD ---
   list: <T>(resource: string) => request<T[]>("GET", `/${resource}`),

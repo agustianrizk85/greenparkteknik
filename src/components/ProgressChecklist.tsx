@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from "react";
-import type { DashboardData, ProgressUnit } from "../types";
+import type { ConstructionStage, ProgressUnit } from "../types";
 import { api } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 import { Bar } from "./ui";
@@ -20,23 +20,23 @@ const SCALAR_HEADER: Record<string, keyof ProgressUnit> = {
   "KETERANGAN PROGRES": "keterangan", KETERANGAN: "keterangan",
 };
 
-export function ProgressChecklist({ data }: { data: DashboardData }) {
+export function ProgressChecklist({ stages: stagesIn, units: unitsIn }: { stages: ConstructionStage[]; units: ProgressUnit[] }) {
   const { user } = useAuth();
   const editable = user?.role === "Kadep Teknik";
 
   const stages = useMemo(
-    () => [...data.constructionStages].sort((a, b) => a.no - b.no),
-    [data.constructionStages],
+    () => [...stagesIn].sort((a, b) => a.no - b.no),
+    [stagesIn],
   );
   const groups = useMemo(() => groupByTermin(stages), [stages]);
   const totalWeight = useMemo(() => stages.reduce((a, s) => a + s.weight, 0) || 100, [stages]);
 
-  const [units, setUnits] = useState<ProgressUnit[]>(data.progressUnits);
+  const [units, setUnits] = useState<ProgressUnit[]>(unitsIn);
   const projects = useMemo(
     () => Array.from(new Set(units.map((u) => u.project))).sort(),
     [units],
   );
-  const [project, setProject] = useState<string>(() => data.progressUnits[0]?.project ?? "");
+  const [project, setProject] = useState<string>(() => unitsIn[0]?.project ?? "");
   const [q, setQ] = useState("");
   const [msg, setMsg] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
