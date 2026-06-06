@@ -21,6 +21,7 @@ import { useAuth } from "./auth/AuthContext";
 import { Login } from "./components/Login";
 import { MasterData } from "./master/MasterData";
 import { ProsesBisnis } from "./components/ProsesBisnis";
+import { ProgressChecklist } from "./components/ProgressChecklist";
 
 interface TabDef {
   id: string;
@@ -39,6 +40,9 @@ const TABS: TabDef[] = [
   { id: "ai", label: "AI & Decision", icon: "cpu" },
   { id: "kpi", label: "KPI", icon: "trend" },
   { id: "triggers", label: "Early Warning", icon: "filter" },
+  { id: "checklist", label: "Cek List Progress", icon: "grid" },
+  { id: "kurva", label: "Kurva S", icon: "trend" },
+  { id: "deviasi", label: "Deviasi", icon: "alert" },
   { id: "proses", label: "Proses Bisnis", icon: "rec" },
   { id: "master", label: "Master Data", icon: "db" },
 ];
@@ -149,6 +153,8 @@ function Dashboard({ D }: { D: DashboardData }) {
           <MasterData />
         ) : tab === "proses" ? (
           <ProsesBisnis />
+        ) : tab === "checklist" ? (
+          <ProgressChecklist data={D} />
         ) : tab === "overview" ? (
           <Overview data={data} openFocus={openFocus} openProject={openProject} />
         ) : (

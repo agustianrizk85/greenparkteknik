@@ -14,6 +14,8 @@ const FLOW: Step[] = [
   { n: 5, title: "Cek Kesiapan Site & Handover", desc: "Skor kesiapan (0–100) per proyek/unit sebelum mulai bangun & serah terima, beserta gap utama yang harus dibereskan." },
   { n: 6, title: "KPI & Early Warning", desc: "KPI memantau indikator kunci dengan ambang Hijau/Kuning/Merah. Trigger early-warning menyala saat ambang terlampaui dan menentukan jalur eskalasi." },
   { n: 7, title: "AI & Decision", desc: "Insight otomatis dan daftar keputusan kritis membantu CEO mengambil tindakan cepat berdasarkan data di atas." },
+  { n: 8, title: "Cek List Progress (Bobot Tahap)", desc: "Tiap unit punya 17 tahap pembangunan berbobot (Termin 1–4). Centang tahap yang selesai → persentase progres unit otomatis (Σ bobot tahap tercentang). Bobot diatur di Master Data → Tahap Pembangunan, data unit bisa diimpor dari Excel." },
+  { n: 9, title: "Kurva S & Deviasi", desc: "Master Bobot Pekerjaan + bobot mingguan (20 minggu) jadi baseline Kurva S. Progres mingguan unit dibandingkan target → deviasi, status (Sangat Cepat…Critical Delay), SPI, dan forecast keterlambatan. Deviasi ≤ −5% wajib Recovery Plan." },
 ];
 
 const TOOLS = [
@@ -21,6 +23,7 @@ const TOOLS = [
   { label: "Contoh (Excel)", desc: "Unduh template .xlsx (header per kolom), isi di Excel." },
   { label: "Import", desc: "Unggah file .xlsx yang sudah diisi → data masuk massal." },
   { label: "Excel (export)", desc: "Unduh isi tabel sebagai .xlsx (header bold, freeze, autofilter)." },
+  { label: "Centang tahap (Cek List Progress)", desc: "Di tab Cek List Progress, admin mencentang tahap selesai per unit → % progres otomatis. Bisa juga impor unit dari Excel (.xlsx) lewat tombol Import." },
   { label: "Seed data contoh", desc: "Pulihkan seluruh data ke contoh bawaan (untuk demo/uji)." },
   { label: "Hapus semua data", desc: "Kosongkan seluruh data (mulai dari nol). Akun login tetap aman." },
 ];

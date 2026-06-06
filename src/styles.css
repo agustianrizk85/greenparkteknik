@@ -669,3 +669,45 @@ table.big td.num { font-family: var(--font-mono); }
 .pb-tool { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 11px 14px; box-shadow: var(--shadow); }
 .pb-tool b { display: block; font-size: 13px; color: var(--navy-800); margin-bottom: 2px; }
 .pb-tool span { font-size: 12px; color: var(--ink-2); line-height: 1.45; }
+
+/* ====================================================================
+   Cek List Progress — Excel-like weighted construction checklist grid
+   ==================================================================== */
+.ckl-filter, .ckl-search {
+  font-family: var(--font-body); font-size: 12px; padding: 5px 9px;
+  border: 1px solid var(--line); border-radius: 7px; background: var(--panel); color: var(--ink);
+}
+.ckl-search { width: 150px; }
+.ckl-msg { padding: 6px 14px; font-size: 12px; font-weight: 600; }
+.ckl-scroll { overflow: auto; max-height: 820px; border-top: 1px solid var(--line); }
+.ckl-table { border-collapse: separate; border-spacing: 0; font-size: 11px; width: max-content; min-width: 100%; }
+.ckl-table th, .ckl-table td {
+  border-bottom: 1px solid var(--line); border-right: 1px solid var(--line);
+  padding: 4px 6px; background: var(--panel);
+}
+.ckl-table thead th { position: sticky; top: 0; z-index: 3; background: var(--panel-2); font-weight: 700; color: var(--navy-800); }
+.ckl-table thead tr:nth-child(2) th { top: 28px; }
+.ckl-termin { text-align: center; font-size: 10px; letter-spacing: .05em; font-weight: 800; }
+.ckl-termin.t1 { background: #eef4fb; }
+.ckl-termin.t2 { background: #eaf6ef; }
+.ckl-termin.t3 { background: #fdf3e6; }
+.ckl-termin.t4 { background: #f3eefb; }
+.ckl-stage { vertical-align: bottom; min-width: 36px; max-width: 48px; }
+.ckl-stage-name { display: block; font-size: 8.5px; line-height: 1.06; font-weight: 600; color: var(--ink-2); white-space: normal; }
+.ckl-stage-w { display: block; font-size: 8px; color: var(--ink-3); font-family: var(--font-mono); margin-top: 1px; }
+.ckl-cell { text-align: center; }
+.ckl-cell input { cursor: pointer; width: 15px; height: 15px; accent-color: var(--green-600); }
+.ckl-cell input:disabled { cursor: default; }
+.ckl-sticky { position: sticky; z-index: 2; }
+.ckl-l1 { left: 0; min-width: 80px; }
+.ckl-l2 { left: 80px; min-width: 52px; }
+.ckl-table thead th.ckl-sticky { z-index: 4; }
+.ckl-id { font-weight: 700; white-space: nowrap; }
+.ckl-status { white-space: nowrap; font-size: 10px; color: var(--ink-2); }
+.ckl-pct { min-width: 122px; }
+.ckl-pct-wrap { display: flex; flex-direction: column; gap: 3px; }
+.ckl-pct-val { font-family: var(--font-mono); font-weight: 600; font-size: 11px; color: var(--ink); }
+.ckl-ket { max-width: 170px; font-size: 10px; color: var(--ink-2); }
+.ckl-empty { text-align: center; padding: 26px; color: var(--ink-3); }
+.ckl-foot { display: flex; justify-content: space-between; align-items: center; padding: 7px 14px; font-size: 11px; color: var(--ink-3); border-top: 1px solid var(--line); flex: none; }
+.ckl-ro { color: var(--warn); font-weight: 600; }

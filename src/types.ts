@@ -159,6 +159,54 @@ export interface Summary {
   critical: number;
 }
 
+/** One weighted construction stage of the operational checklist. */
+export interface ConstructionStage {
+  id: string;
+  no: number;
+  name: string;
+  weight: number;
+  termin: string; // T1 | T2 | T3 | T4
+}
+
+/** One housing unit's progress checklist (stage name -> completed). */
+export interface ProgressUnit {
+  id: string;
+  noInduk: string;
+  project: string;
+  blok: string;
+  tglSpk: string;
+  tglSpkFinish: string;
+  status: string;
+  keterangan: string;
+  stages: Record<string, boolean>;
+}
+
+/** One weighted work item of the Kurva S master (Master Bobot Pekerjaan). */
+export interface WorkItem {
+  id: string;
+  no: number;
+  name: string;
+  weight: number;
+}
+
+/** One week of the standard 20-week S-curve baseline. */
+export interface KurvaWeek {
+  id: string;
+  week: number;
+  weight: number;
+  cumulative: number;
+}
+
+/** Per-unit, per-week cumulative actual-vs-target record. */
+export interface UnitWeeklyProgress {
+  id: string;
+  unitId: string;
+  week: number;
+  actual: number;
+  target: number;
+  updatedBy: string;
+}
+
 /** Full payload returned by GET /api/dashboard. */
 export interface Dashboard {
   projects: Project[];
@@ -175,6 +223,11 @@ export interface Dashboard {
   progressTrend: ProgressTrend;
   kpiTable: KPI[];
   triggers: Trigger[];
+  constructionStages: ConstructionStage[];
+  progressUnits: ProgressUnit[];
+  workItems: WorkItem[];
+  kurvaWeekly: KurvaWeek[];
+  unitWeeklyProgress: UnitWeeklyProgress[];
   summary: Summary;
 }
 

@@ -3,6 +3,8 @@ import type { DashboardData, Project, Status, Tone } from "../types";
 import { STATUS_LABEL, statusVar, toneClass } from "../lib/status";
 import { Bar, Pill, Stat, StatusPill } from "./ui";
 import { Icon } from "./Icon";
+import { ProgressChart } from "./ProgressChart";
+import { deviationStatus, forecastDelayWeeks, kurvaSeries, latestPerUnit, spi } from "../lib/kurvaS";
 
 /* ---- Single project deep-dive ----------------------------------------- */
 export function ProjectDetail({ p }: { p: Project }) {
@@ -481,6 +483,91 @@ function TriggerFocus({ d }: { d: DashboardData }) {
   );
 }
 
+/* ---- Kurva S focus ----------------------------------------------------- */
+function KurvaSFocus({ d }: { d: DashboardData }) {
+  const series = kurvaSeries(d.kurvaWeekly, d.unitWeeklyProgress);
+  const trend = { weeks: series.labels, plan: series.plan, actual: series.actual };
+  const weeks = [...d.kurvaWeekly].sort((a, b) => a.week - b.week);
+  const items = [...d.workItems].sort((a, b) => a.no - b.no);
+  return (
+    <>
+      <div className="section-title">Kurva S — Rencana vs Realisasi (baseline 20 minggu)</div>
+      <ProgressChart trend={trend} />
+      <div className="note" style={{ marginTop: 4 }}>
+        Garis putus-putus = RENCANA kumulatif (bobot mingguan). Garis hijau = REALISASI rata-rata unit.
+      </div>
+
+      <div className="section-title" style={{ marginTop: 16 }}>Master Bobot Pekerjaan</div>
+      <table className="big">
+        <thead><tr><th>No</th><th>Item Pekerjaan</th><th>Bobot %</th></tr></thead>
+        <tbody>
+          {items.map((w) => (
+            <tr key={w.id}><td>{w.no}</td><td>{w.name}</td><td>{w.weight.toFixed(2)}%</td></tr>
+          ))}
+        </tbody>
+      </table>
+
+      <div className="section-title" style={{ marginTop: 16 }}>Bobot Mingguan (Kurva S)</div>
+      <table className="big">
+        <thead><tr><th>Minggu</th><th>Bobot %</th><th>Kumulatif %</th></tr></thead>
+        <tbody>
+          {weeks.map((w) => (
+            <tr key={w.id}><td>M{w.week}</td><td>{w.weight.toFixed(3)}%</td><td>{w.cumulative.toFixed(2)}%</td></tr>
+          ))}
+        </tbody>
+      </table>
+    </>
+  );
+}
+
+/* ---- Deviasi focus ----------------------------------------------------- */
+function DeviasiFocus({ d }: { d: DashboardData }) {
+  const latest = latestPerUnit(d.unitWeeklyProgress);
+  const unitName = new Map(d.progressUnits.map((u) => [u.id, `${u.project} · ${u.blok}`]));
+  const byUnitRows = (id: string) => d.unitWeeklyProgress.filter((r) => r.unitId === id);
+  const rows = Array.from(latest.values()).sort((a, b) => a.actual - b.actual - (b.target - a.target));
+  if (rows.length === 0) {
+    return <div className="note">Belum ada data progress mingguan unit. Input di Master Data → Progress Mingguan Unit.</div>;
+  }
+  return (
+    <>
+      <div className="section-title">Monitoring Deviasi per Unit (minggu terbaru)</div>
+      <table className="big">
+        <thead>
+          <tr>
+            <th>Unit</th><th>Minggu</th><th>Target %</th><th>Aktual %</th><th>Deviasi</th>
+            <th>Status</th><th>SPI</th><th>Forecast Telat</th><th>Recovery</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r) => {
+            const dev = r.actual - r.target;
+            const st = deviationStatus(dev);
+            const s = spi(r.actual, r.target);
+            const fc = forecastDelayWeeks(byUnitRows(r.unitId));
+            return (
+              <tr key={r.id}>
+                <td>{unitName.get(r.unitId) ?? r.unitId}</td>
+                <td>M{r.week}</td>
+                <td>{r.target.toFixed(1)}</td>
+                <td>{r.actual.toFixed(1)}</td>
+                <td style={{ fontWeight: 600 }}>{(dev > 0 ? "+" : "") + dev.toFixed(1)}%</td>
+                <td><Pill tone={st.tone}>{st.label}</Pill></td>
+                <td>{s.toFixed(2)}</td>
+                <td>{fc > 0 ? `${fc} mgg` : "—"}</td>
+                <td>{dev <= -5 ? <Pill tone="red">Wajib Recovery</Pill> : "—"}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+      <div className="note" style={{ marginTop: 8 }}>
+        Deviasi = Aktual − Target kumulatif. SPI = Aktual ÷ Target (&gt;1 lebih cepat). Deviasi ≤ −5% wajib Recovery Plan + Root Cause.
+      </div>
+    </>
+  );
+}
+
 export interface FocusEntry {
   tag: string;
   title: string;
@@ -497,5 +584,7 @@ export const FOCUS_META: Record<string, FocusEntry> = {
   ai: { tag: "PANEL G+H", title: "AI Insights & Critical Decision", sub: "intelligence & decision", render: (d) => <AiFocus d={d} /> },
   kpi: { tag: "SECTION 6", title: "KPI Dashboard Teknik", sub: "definisi & ambang batas", render: (d) => <KpiFocus d={d} /> },
   triggers: { tag: "SECTION 7", title: "Early Warning Trigger", sub: "alarm otomatis", render: (d) => <TriggerFocus d={d} /> },
+  kurva: { tag: "KURVA S", title: "Kurva S — Pengendalian Progres", sub: "rencana vs realisasi", render: (d) => <KurvaSFocus d={d} /> },
+  deviasi: { tag: "DEVIASI", title: "Monitoring Deviasi & Forecast", sub: "SPI · recovery", render: (d) => <DeviasiFocus d={d} /> },
   chart: { tag: "PANEL B", title: "Project Progress Control", sub: "kendali proyek", render: (d) => <ProjectsFocus d={d} /> },
 };
