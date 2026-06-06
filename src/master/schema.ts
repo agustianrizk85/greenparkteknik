@@ -102,7 +102,30 @@ export const RESOURCES: ResourceConfig[] = [
       { name: "email", label: "Email", type: "text", hideInTable: true, tip: "Email konsumen.", result: "Kontak konsumen." },
     ],
   },
-  /* ===== TRANSAKSI ===== */
+  /* ===== TRANSAKSI (urut alur bisnis) ===== */
+  {
+    key: "akad",
+    group: "Transaksi",
+    title: "Akad",
+    singular: "Akad",
+    fields: [
+      { name: "unitId", label: "Unit", type: "ref", refResource: "units", refLabelField: "blok", tip: "Unit yang diakad.", result: "Relasi akad → unit." },
+      { name: "konsumenId", label: "Konsumen", type: "ref", refResource: "konsumen", refLabelField: "nama", tip: "Pembeli unit.", result: "Relasi akad → konsumen." },
+      { name: "tglAkad", label: "Tgl Akad", type: "text", tip: "Tanggal akad (YYYY-MM-DD).", result: "Awal proses (Pola Bisnis)." },
+    ],
+  },
+  {
+    key: "ttd-gambar-kerja",
+    group: "Transaksi",
+    title: "Ttd Gambar Kerja",
+    singular: "Ttd Gambar Kerja",
+    fields: [
+      { name: "unitId", label: "Unit", type: "ref", refResource: "units", refLabelField: "blok", tip: "Unit terkait.", result: "Relasi → unit." },
+      { name: "tglAcc", label: "Tgl ACC Gambar Kerja", type: "text", tip: "Tanggal ACC/TTD gambar kerja (YYYY-MM-DD).", result: "ACUAN MULAI hitung progres pembangunan." },
+      { name: "tglTerbitSpk", label: "Tgl Terbit SPK", type: "text", hideInTable: true, tip: "Tanggal penerbitan SPK.", result: "Jembatan ke SPK." },
+      { name: "keterangan", label: "Keterangan", type: "textarea", hideInTable: true, tip: "Catatan.", result: "Catatan." },
+    ],
+  },
   {
     key: "spk",
     group: "Transaksi",
@@ -138,18 +161,6 @@ export const RESOURCES: ResourceConfig[] = [
       { name: "linkFoto", label: "Link Foto", type: "text", hideInTable: true, tip: "Tautan bukti foto progres.", result: "Lampiran bukti." },
       { name: "updatedBy", label: "Diupdate Oleh", type: "text", hideInTable: true, tip: "User penginput.", result: "Jejak audit." },
       { name: "tglUpdate", label: "Tgl Update", type: "text", hideInTable: true, tip: "Tanggal update (YYYY-MM-DD).", result: "Kebaruan data." },
-    ],
-  },
-  {
-    key: "akad",
-    group: "Transaksi",
-    title: "Akad",
-    singular: "Akad",
-    fields: [
-      { name: "unitId", label: "Unit", type: "ref", refResource: "units", refLabelField: "blok", tip: "Unit yang diakad.", result: "Relasi akad → unit." },
-      { name: "konsumenId", label: "Konsumen", type: "ref", refResource: "konsumen", refLabelField: "nama", tip: "Pembeli unit.", result: "Relasi akad → konsumen." },
-      { name: "tglAkad", label: "Tgl Akad", type: "text", tip: "Tanggal akad (YYYY-MM-DD).", result: "Awal proses (Pola Bisnis)." },
-      { name: "tglTtdGambar", label: "Tgl TTD Gambar", type: "text", hideInTable: true, tip: "Tanggal TTD gambar kerja (YYYY-MM-DD).", result: "Acuan terbit SPK." },
     ],
   },
   {

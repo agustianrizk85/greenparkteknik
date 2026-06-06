@@ -124,7 +124,14 @@ export interface Akad {
   unitId: string;
   konsumenId: string;
   tglAkad: string;
-  tglTtdGambar: string;
+}
+
+export interface TtdGambarKerja {
+  id: string;
+  unitId: string;
+  tglAcc: string;
+  tglTerbitSpk: string;
+  keterangan: string;
 }
 
 export interface BastKontraktor {
