@@ -515,51 +515,51 @@ function KpiView({ D, onProject }: { D: DashboardData; onProject: (p: ProyekMetr
         )}
       </Panel>
 
-      <div className="grid grid-2">
-        {/* Cluster — kartu ringkas */}
-        <Panel tag="CLUSTER" title="Progres per Cluster" sub="agregat per kawasan">
-          <div className="ct-cards">
-            {D.clusterMetrics.map((c) => (
-              <div key={c.kode} className={`ct-card ${statusTone(c.status)}`}>
-                <div className="ct-head">
-                  <span className="ct-kode">{c.kode}</span>
-                  <span className="ct-nama">{c.nama}</span>
-                  <Pill tone={statusTone(c.status)}>{c.status}</Pill>
-                </div>
-                <div className="ct-bar"><Bar value={c.aktual} tick={c.target} tone={barTone(c.status)} /></div>
-                <div className="ct-meta">
-                  <span>{c.proyek} proyek · {c.units} unit</span>
-                  <span>Aktual <b>{pct(c.aktual)}</b> / target {pct(c.target)} · dev <b style={{ color: c.deviasi < -1 ? "var(--bad)" : "var(--ink)" }}>{c.deviasi > 0 ? "+" : ""}{c.deviasi.toFixed(1)}</b></span>
-                </div>
+      {/* Cluster — strip kartu ringkas (full width) */}
+      <Panel tag="CLUSTER" title="Progres per Cluster" sub="agregat per kawasan">
+        <div className="ct-cards">
+          {D.clusterMetrics.map((c) => (
+            <div key={c.kode} className={`ct-card ${statusTone(c.status)}`}>
+              <div className="ct-head">
+                <span className="ct-kode">{c.kode}</span>
+                <span className="ct-nama">{c.nama}</span>
+                <Pill tone={statusTone(c.status)}>{c.status}</Pill>
               </div>
-            ))}
-            {D.clusterMetrics.length === 0 && <div className="tbl-empty">Belum ada data.</div>}
-          </div>
-        </Panel>
+              <div className="ct-bar"><Bar value={c.aktual} tick={c.target} tone={barTone(c.status)} /></div>
+              <div className="ct-meta">
+                <span>{c.proyek} proyek · {c.units} unit</span>
+                <span>Aktual <b>{pct(c.aktual)}</b> / target {pct(c.target)} · dev <b style={{ color: c.deviasi < -1 ? "var(--bad)" : "var(--ink)" }}>{c.deviasi > 0 ? "+" : ""}{c.deviasi.toFixed(1)}</b></span>
+              </div>
+            </div>
+          ))}
+          {D.clusterMetrics.length === 0 && <div className="tbl-empty">Belum ada data.</div>}
+        </div>
+      </Panel>
 
-        {/* Kontraktor — tabel ringkas + bar */}
-        <Panel tag="KONTRAKTOR" title="Deviasi per Kontraktor" sub="paling kritis dahulu (top 12)">
-          <div className="tbl-scroll">
-            <table className="tbl">
-              <thead>
-                <tr><th>Kontraktor</th><th className="num">Unit</th><th style={{ width: 130 }}>Aktual</th><th className="num">Deviasi</th><th>Status</th></tr>
-              </thead>
-              <tbody>
-                {kd.map((c) => (
-                  <tr key={c.id}>
-                    <td>{c.nama}</td>
-                    <td className="num">{c.units}</td>
-                    <td><div style={{ display: "flex", alignItems: "center", gap: 6 }}><span style={{ width: 34, fontVariantNumeric: "tabular-nums" }}>{Math.round(c.aktual)}%</span><Bar value={c.aktual} tone={barTone(c.status)} /></div></td>
-                    <td className="num" style={{ color: c.deviasi < -1 ? "var(--bad)" : "var(--ink-2)" }}>{c.deviasi > 0 ? "+" : ""}{c.deviasi.toFixed(1)}</td>
-                    <td><Pill tone={statusTone(c.status)}>{c.status}</Pill></td>
-                  </tr>
-                ))}
-                {kd.length === 0 && <tr><td colSpan={5} className="tbl-empty">Belum ada SPK ber-kontraktor.</td></tr>}
-              </tbody>
-            </table>
-          </div>
-        </Panel>
-      </div>
+      {/* Kontraktor — tabel ringkas + bar (full width) */}
+      <Panel tag="KONTRAKTOR" title="Deviasi per Kontraktor" sub="paling kritis dahulu (top 12)">
+        <div className="tbl-scroll">
+          <table className="tbl">
+            <thead>
+              <tr><th>#</th><th>Kontraktor</th><th className="num">Unit</th><th style={{ width: 180 }}>Aktual</th><th className="num">Deviasi</th><th className="num">SPI</th><th>Status</th></tr>
+            </thead>
+            <tbody>
+              {kd.map((c, i) => (
+                <tr key={c.id}>
+                  <td>{i + 1}</td>
+                  <td>{c.nama}</td>
+                  <td className="num">{c.units}</td>
+                  <td><div style={{ display: "flex", alignItems: "center", gap: 8 }}><span style={{ width: 38, fontVariantNumeric: "tabular-nums" }}>{Math.round(c.aktual)}%</span><Bar value={c.aktual} tone={barTone(c.status)} /></div></td>
+                  <td className="num" style={{ color: c.deviasi < -1 ? "var(--bad)" : "var(--ink-2)" }}>{c.deviasi > 0 ? "+" : ""}{c.deviasi.toFixed(1)}</td>
+                  <td className="num">{c.spi.toFixed(2)}</td>
+                  <td><Pill tone={statusTone(c.status)}>{c.status}</Pill></td>
+                </tr>
+              ))}
+              {kd.length === 0 && <tr><td colSpan={7} className="tbl-empty">Belum ada SPK ber-kontraktor.</td></tr>}
+            </tbody>
+          </table>
+        </div>
+      </Panel>
 
       {/* Mutu */}
       <Panel tag="MUTU" title="Komplain & Defect" sub="dari transaksi (Master Data → Transaksi)">

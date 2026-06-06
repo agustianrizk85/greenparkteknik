@@ -281,6 +281,7 @@ table.tbl td.num, table.tbl th.num { text-align: right; font-variant-numeric: ta
 .grid-2 {
   display: grid; grid-template-columns: 1fr 1fr;
   gap: 14px; align-items: start;
+  flex: none;            /* jangan menyusut di body (flex column) → cegah overlap */
 }
 .tbl-scroll { max-height: 58vh; overflow: auto; }
 
@@ -317,10 +318,11 @@ table.tbl td.num, table.tbl th.num { text-align: right; font-variant-numeric: ta
 
 /* KPI Direksi tidy layout */
 .kpi-row-4 { grid-template-columns: repeat(4, 1fr); }
-.ct-cards { display: flex; flex-direction: column; gap: 10px; width: 100%; }
+.ct-cards { display: flex; flex-wrap: wrap; gap: 12px; width: 100%; }
 .ct-card {
   border: 1px solid var(--line); border-left-width: 5px; border-radius: 9px;
-  padding: 10px 13px; display: flex; flex-direction: column; gap: 7px; background: var(--panel);
+  padding: 12px 15px; display: flex; flex-direction: column; gap: 8px; background: var(--panel);
+  flex: 1 1 340px; max-width: 560px;
 }
 .ct-card.red { border-left-color: var(--bad); }
 .ct-card.yellow { border-left-color: var(--warn); }
