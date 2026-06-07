@@ -386,6 +386,14 @@ table.tbl td.num, table.tbl th.num { text-align: right; font-variant-numeric: ta
 .ai-body { margin-top: 8px; font-size: 12.5px; color: var(--ink-2); line-height: 1.5; max-height: 260px; overflow-y: auto; }
 .ai-body p { margin: 2px 0; }
 .ai-body.warn { color: var(--warn); }
+/* Visual insight */
+.ins-rich { display: flex; flex-direction: column; gap: 6px; }
+.ins-h { display: flex; align-items: center; gap: 7px; font-family: var(--font-display); font-weight: 800; font-size: 12.5px; color: var(--ink); margin-top: 8px; }
+.ins-h:first-child { margin-top: 0; }
+.ins-h-ic { font-size: 14px; }
+.ins-li { font-size: 12.5px; color: var(--ink-2); line-height: 1.5; border-left: 3px solid var(--line-strong); background: var(--panel-2); border-radius: 6px; padding: 6px 10px; }
+.ins-p { font-size: 12.5px; color: var(--ink-2); line-height: 1.5; margin: 2px 0; }
+.ins-chip { display: inline-block; font-size: 10.5px; font-weight: 700; border: 1px solid currentColor; border-radius: 999px; padding: 0 7px; line-height: 16px; vertical-align: middle; }
 table.tbl tr.clickable:hover td { background: var(--panel-2); }
 table.tbl td.name { font-weight: 600; color: var(--ink); }
 table.tbl td.num { font-family: var(--font-mono); text-align: right; }
