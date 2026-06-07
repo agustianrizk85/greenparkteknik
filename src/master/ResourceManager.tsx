@@ -98,18 +98,21 @@ export function ResourceManager({ config }: { config: ResourceConfig }) {
     const arr = data as Record<string, unknown>[];
     let n = 0;
     for (const raw of arr) {
-      await api.create(config.key, normalizeRecord(config, raw));
+      await api.create(config.key, normalizeRecord(config, raw, refData));
       n++;
     }
     load();
     return n;
   };
 
-  // Export the current resource to a real .xlsx (bold/frozen header + autofilter).
+  // Export to .xlsx — relation columns show NAMES (not ids) for round-trip import.
   const onExport = () => {
-    const fields = config.fields;
-    const columns = ["ID", ...fields.map((f) => f.label)];
-    const body: Cell[][] = items.map((rec) => [rec.id, ...fields.map((f) => exportCell(f, rec))]);
+    const fields = config.fields.filter((f) => !f.uiOnly);
+    const columns = [config.idLabel ?? "ID", ...fields.map((f) => f.label)];
+    const body: Cell[][] = items.map((rec) => [
+      rec.id,
+      ...fields.map((f) => (f.type === "ref" ? refLabel(f, rec[f.name]) : exportCell(f, rec))),
+    ]);
     downloadXlsx(`Teknik-${config.title}`, columns, body, config.title.slice(0, 31));
   };
 
@@ -127,7 +130,7 @@ export function ResourceManager({ config }: { config: ResourceConfig }) {
           <ImportButton
             entity={config.key}
             columns={importColumns(config)}
-            sample={[sampleRecord(config)]}
+            sample={[sampleRecord(config, refData)]}
             onImport={importItems}
           />
           <button className="md-btn primary" onClick={openCreate}>
@@ -434,33 +437,72 @@ function buildPayload(config: ResourceConfig, editing: MasterRecord | null, valu
   return payload;
 }
 
-/* ---- Import helpers ---------------------------------------------------- */
+/* ---- Import helpers ----------------------------------------------------- *
+ * Templates & imports use human LABELS/NAMES as headers (users don't know
+ * internal ids). Relation (ref) columns accept a NAME; we resolve it back to
+ * the id on import. For units (blok can repeat), a "Proyek" column disambiguates.
+ * ------------------------------------------------------------------------- */
 
-/** Ordered column keys for the CSV template (id first when user-editable). */
-function importColumns(config: ResourceConfig): string[] {
-  return [...(config.idEditable ? ["id"] : []), ...config.fields.filter((f) => !f.readOnly && !f.uiOnly).map((f) => f.name)];
+type RefData = Record<string, MasterRecord[]>;
+
+/** Resolve a typed name back to a ref id (passes through if already an id). */
+function resolveRefId(f: FieldDef, val: unknown, refData: RefData, proyekCtx?: string): string {
+  const s = String(val ?? "").trim();
+  if (!s) return "";
+  const list = refData[f.refResource ?? ""] ?? [];
+  if (list.some((r) => String(r.id) === s)) return s; // already an id
+  const lc = s.toLowerCase();
+  let m = list.filter((r) => String(r[f.refLabelField ?? "id"] ?? "").trim().toLowerCase() === lc);
+  if (f.refResource === "units" && m.length > 1 && proyekCtx) {
+    m = m.filter((r) => String(r.proyekId) === proyekCtx);
+  }
+  return m[0] ? String(m[0].id) : s;
 }
 
-/** A blank record matching the schema — used as the import template/sample. */
-function sampleRecord(config: ResourceConfig): Record<string, unknown> {
-  const rec: Record<string, unknown> = {};
-  if (config.idEditable) rec.id = "";
+/** Columns for the import template — labels; includes a Proyek column for ref. */
+function importColumns(config: ResourceConfig): string[] {
+  const cols: string[] = [];
+  if (config.idEditable) cols.push(config.idLabel ?? "ID");
   for (const f of config.fields) {
-    if (f.readOnly || f.uiOnly) continue; // derived/UI-only; not part of the import template
-    rec[f.name] =
-      f.type === "number" ? 0 : f.type === "tags" ? [] : f.type === "select" ? f.options?.[0]?.value ?? "" : "";
+    if (f.readOnly) continue;
+    if (f.uiOnly && f.type !== "ref") continue; // keep the uiOnly Proyek ref as a column
+    cols.push(f.label);
+  }
+  return cols;
+}
+
+/** A sample row for the template — keyed by label, with a real example name for refs. */
+function sampleRecord(config: ResourceConfig, refData: RefData): Record<string, unknown> {
+  const rec: Record<string, unknown> = {};
+  if (config.idEditable) rec[config.idLabel ?? "ID"] = "";
+  for (const f of config.fields) {
+    if (f.readOnly) continue;
+    if (f.uiOnly && f.type !== "ref") continue;
+    if (f.type === "ref") {
+      const ex = (refData[f.refResource ?? ""] ?? [])[0];
+      rec[f.label] = ex ? String(ex[f.refLabelField ?? "id"] ?? "") : "(nama)";
+    } else if (f.type === "number") rec[f.label] = 0;
+    else if (f.type === "select") rec[f.label] = f.options?.[0]?.value ?? "";
+    else rec[f.label] = "";
   }
   return rec;
 }
 
-/** Coerce one imported record to the field types the API expects. */
-function normalizeRecord(config: ResourceConfig, raw: Record<string, unknown>): Record<string, unknown> {
+/** Coerce one imported row (label-keyed, names) to the API payload (ids). */
+function normalizeRecord(config: ResourceConfig, raw: Record<string, unknown>, refData: RefData): Record<string, unknown> {
   const rec: Record<string, unknown> = {};
-  if (config.idEditable && raw.id != null && String(raw.id).trim() !== "") rec.id = String(raw.id).trim();
+  if (config.idEditable) {
+    const idv = raw[config.idLabel ?? "ID"];
+    if (idv != null && String(idv).trim() !== "") rec.id = String(idv).trim();
+  }
+  // Resolve a Proyek context first (to disambiguate unit by blok).
+  const pf = config.fields.find((f) => f.type === "ref" && f.refResource === "proyek");
+  const proyekCtx = pf ? resolveRefId(pf, raw[pf.label], refData) : "";
   for (const f of config.fields) {
-    if (f.readOnly || f.uiOnly) continue; // derived/UI-only; ignore any imported value
-    const v = raw[f.name];
-    if (f.type === "number") rec[f.name] = v == null || v === "" ? 0 : Number(v);
+    if (f.readOnly || f.uiOnly) continue; // derived/UI-only; not sent
+    const v = raw[f.label];
+    if (f.type === "ref") rec[f.name] = resolveRefId(f, v, refData, proyekCtx);
+    else if (f.type === "number") rec[f.name] = v == null || v === "" ? 0 : Number(v);
     else if (f.type === "tags")
       rec[f.name] = Array.isArray(v)
         ? v.map((s) => String(s))
