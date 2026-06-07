@@ -91,6 +91,20 @@ export const api = {
       "GET",
       `/insight?scope=${encodeURIComponent(scope)}`,
     ),
+  // --- File upload ---
+  upload: async (file: File, name: string): Promise<{ url: string; name: string }> => {
+    const fd = new FormData();
+    fd.append("file", file);
+    if (name) fd.append("name", name);
+    const headers: Record<string, string> = {};
+    if (token) headers["Authorization"] = "Bearer " + token;
+    const res = await fetch(BASE + "/upload", { method: "POST", headers, body: fd });
+    if (!res.ok) throw new ApiError("Upload gagal (HTTP " + res.status + ")", res.status);
+    return (await res.json()) as { url: string; name: string };
+  },
+  /** Resolve a stored file path ("/files/x") to a full URL on the API host. */
+  fileUrl: (path: string) => (!path ? "" : path.startsWith("http") ? path : BASE.replace(/\/api$/, "") + path),
+
   aiConfig: () => request<{ configured: boolean; model: string }>("GET", "/ai/config"),
   aiModels: () => request<{ id: string; name: string }[]>("GET", "/ai/models"),
   setAiModel: (model: string) => request<{ model: string }>("PUT", "/ai/model", { model }),

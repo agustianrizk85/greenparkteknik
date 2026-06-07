@@ -106,6 +106,7 @@ export interface SPK {
   nilaiKontrak: number;
   layout: string;
   nominalAddendum: number;
+  totalNilai: number;
 }
 
 export interface ProgresMingguan {
@@ -131,6 +132,7 @@ export interface TtdGambarKerja {
   unitId: string;
   tglAcc: string;
   tglTerbitSpk: string;
+  lampiran: string;
   keterangan: string;
 }
 
@@ -149,6 +151,7 @@ export interface BastKonsumen {
   konsumenId: string;
   tglBast: string;
   status: string;
+  lampiranFoto: string;
   scanBerkas: string;
 }
 

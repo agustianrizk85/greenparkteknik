@@ -292,6 +292,23 @@ table.tbl td.num, table.tbl th.num { text-align: right; font-variant-numeric: ta
 .kurva-selinfo { font-size: 11.5px; color: var(--ink-2); }
 .kurva-subhead { font-size: 11px; font-weight: 700; color: var(--ink-3); text-transform: uppercase; letter-spacing: .04em; margin: 4px 0 6px; }
 
+/* Alert System */
+.alert-cols { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.alert-blk-hd { display: flex; align-items: center; gap: 7px; font-weight: 800; font-size: 12px; text-transform: uppercase; letter-spacing: .03em; margin-bottom: 7px; }
+.alert-dot { width: 9px; height: 9px; border-radius: 50%; }
+.alert-count { margin-left: auto; background: var(--panel-2); color: var(--ink-2); border-radius: 999px; padding: 0 8px; font-size: 11px; }
+.alert-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 5px; max-height: 220px; overflow-y: auto; }
+.alert-list li { font-size: 11.5px; color: var(--ink-2); border-left: 3px solid var(--line-strong); padding: 4px 8px; background: var(--panel-2); border-radius: 6px; }
+.alert-none { opacity: .5; border-left-color: transparent !important; }
+/* CEO Command */
+.ceo-sub { font-size: 10.5px; color: var(--ink-3); margin-top: 2px; }
+.ceo-nowrap { white-space: nowrap; }
+/* File field */
+.mdf-file { display: flex; flex-direction: column; gap: 5px; }
+.mdf-file-link { font-size: 12px; color: var(--accent, #4a90d9); }
+.mdf-file-busy { font-size: 11px; color: var(--ink-3); }
+.mdf-file input[type=file] { font-size: 12px; }
+
 /* clickable KPI + hint */
 .kpi.clickable { cursor: pointer; transition: transform .08s, box-shadow .12s; }
 .kpi.clickable:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(20,40,80,.14); }

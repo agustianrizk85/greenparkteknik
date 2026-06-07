@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import type { DashboardData, ProyekMetric, KurvaWeek, Tone } from "./types";
 import { api } from "./api/client";
@@ -225,6 +225,15 @@ function Overview({ D, setTab, onProject }: { D: DashboardData; setTab: (t: stri
         )}
       </Panel>
 
+      <div className="grid grid-2">
+        <Panel tag="ALERT" title="Alert System" sub="Red · Yellow · Green — otomatis dari data">
+          <AlertSystem D={D} />
+        </Panel>
+        <Panel tag="CEO COMMAND" title="CEO Command Panel" sub="Issue → Command → PIC → Deadline" onExpand={goDeviasi}>
+          <CeoCommand rows={attention.slice(0, 8)} />
+        </Panel>
+      </div>
+
       <AiInsight scope="overview" label="Ringkasan Eksekutif" />
       <KurvaView D={D} />
       <div className="grid grid-2">
@@ -336,6 +345,23 @@ function KurvaView({ D }: { D: DashboardData }) {
   const dots = D.proyek.filter((p) => p.week > 0 && (focus === "all" || p.id === focus));
   const sel = D.proyek.find((p) => p.id === focus);
 
+  // Filter per Unit (dihitung dari checklist + tgl SPK).
+  const [unitFocus, setUnitFocus] = useState<string>("");
+  const stageW = useMemo(() => Object.fromEntries(D.constructionStages.map((s) => [s.name, s.weight])), [D.constructionStages]);
+  const proyUnits = useMemo(() => (sel ? D.progressUnits.filter((u) => u.project === sel.nama) : []), [sel, D.progressUnits]);
+  const unitDot = useMemo(() => {
+    const pu = proyUnits.find((u) => u.id === unitFocus);
+    if (!pu) return null;
+    const aktual = Object.entries(pu.stages).reduce((a, [k, v]) => a + (v ? stageW[k] ?? 0 : 0), 0);
+    let week = 0;
+    if (pu.tglSpk) {
+      const days = (Date.now() - new Date(pu.tglSpk).getTime()) / 86400000;
+      if (!isNaN(days)) week = Math.min(maxWeek, Math.max(1, Math.floor(days / 7) + 1));
+    }
+    const target = week > 0 ? weeks.find((w) => w.week === week)?.cumulative ?? 0 : 0;
+    return { blok: pu.blok, week, aktual, target };
+  }, [proyUnits, unitFocus, stageW, weeks, maxWeek]);
+
   return (
     <Panel
       tag="KURVA S"
@@ -344,12 +370,20 @@ function KurvaView({ D }: { D: DashboardData }) {
     >
       <div className="kurva-wrap">
         <div className="kurva-toolbar">
-          <select value={focus} onChange={(e) => setFocus(e.target.value)}>
+          <select value={focus} onChange={(e) => { setFocus(e.target.value); setUnitFocus(""); }}>
             <option value="all">Semua proyek ({dots.length})</option>
             {D.proyek.map((p) => (
               <option key={p.id} value={p.id}>{p.nama}</option>
             ))}
           </select>
+          {sel && (
+            <select value={unitFocus} onChange={(e) => setUnitFocus(e.target.value)} title="Filter per unit">
+              <option value="">— semua unit —</option>
+              {proyUnits.map((u) => (
+                <option key={u.id} value={u.id}>Blok {u.blok}</option>
+              ))}
+            </select>
+          )}
           {sel && (
             <span className="kurva-selinfo">
               {sel.nama}: minggu ~{sel.week} · aktual {pct(sel.aktual)} · target {pct(sel.target)} ·{" "}
@@ -380,12 +414,22 @@ function KurvaView({ D }: { D: DashboardData }) {
               </circle>
             </g>
           ))}
+          {/* unit terpilih */}
+          {unitDot && unitDot.week > 0 && (
+            <g>
+              <line x1={x(unitDot.week)} y1={y(unitDot.target)} x2={x(unitDot.week)} y2={y(unitDot.aktual)} stroke="#7b2ff7" strokeDasharray="3 3" strokeWidth="1.5" />
+              <circle cx={x(unitDot.week)} cy={y(unitDot.aktual)} r="7" fill="#7b2ff7" stroke="#fff" strokeWidth="1.5">
+                <title>{`Unit ${unitDot.blok} — minggu ~${unitDot.week}, aktual ${unitDot.aktual.toFixed(1)}%, target ${unitDot.target.toFixed(1)}%`}</title>
+              </circle>
+            </g>
+          )}
         </svg>
         <div className="kurva-legend">
           <span><i className="lg-line" style={{ background: "#4a90d9" }} /> Rencana (baseline)</span>
           <span><i className="lg-dot" style={{ background: "var(--ok)" }} /> On/Ahead</span>
           <span><i className="lg-dot" style={{ background: "var(--warn)" }} /> Warning</span>
           <span><i className="lg-dot" style={{ background: "var(--bad)" }} /> Critical</span>
+          {unitDot && <span><i className="lg-dot" style={{ background: "#7b2ff7" }} /> Unit terpilih</span>}
         </div>
       </div>
       <div className="tbl-scroll" style={{ marginTop: 12 }}>
@@ -571,6 +615,68 @@ function KpiView({ D, onProject }: { D: DashboardData; onProject: (p: ProyekMetr
         </div>
       </Panel>
     </>
+  );
+}
+
+/* ---- Alert System & CEO Command (derived) ------------------------------ */
+
+function AlertSystem({ D }: { D: DashboardData }) {
+  const red = [
+    ...D.proyek.filter((p) => p.status === "Critical Delay").map((p) => `${p.nama} · dev ${p.deviasi.toFixed(1)}% · telat ${p.lateWeeks.toFixed(1)} mgg`),
+    ...(D.quality.komplainOpen > 0 ? [`${D.quality.komplainOpen} komplain belum selesai`] : []),
+    ...(D.quality.defectRepeat > 0 ? [`${D.quality.defectRepeat} defect berulang`] : []),
+  ];
+  const yellow = D.proyek.filter((p) => p.status === "Warning").map((p) => `${p.nama} · dev ${p.deviasi.toFixed(1)}%`);
+  const green = [
+    `${D.summary.onSchedule} proyek on schedule`,
+    `Overall ${pct(D.summary.overall)} · Avg SPI ${D.summary.avgSpi.toFixed(2)}`,
+  ];
+  const blocks = [
+    { key: "red", title: "Red Alert", items: red, c: "var(--bad)" },
+    { key: "yellow", title: "Yellow", items: yellow, c: "var(--warn)" },
+    { key: "green", title: "Green Signal", items: green, c: "var(--ok)" },
+  ];
+  return (
+    <div className="alert-cols">
+      {blocks.map((b) => (
+        <div key={b.key} className="alert-blk">
+          <div className="alert-blk-hd" style={{ color: b.c }}>
+            <span className="alert-dot" style={{ background: b.c }} />
+            {b.title}
+            <span className="alert-count">{b.items.length}</span>
+          </div>
+          <ul className="alert-list">
+            {b.items.length === 0 ? <li className="alert-none">—</li> : b.items.map((it, i) => <li key={i} style={{ borderColor: b.c }}>{it}</li>)}
+          </ul>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function CeoCommand({ rows }: { rows: ProyekMetric[] }) {
+  if (rows.length === 0) return <div className="tbl-empty">✓ Tidak ada isu kritis.</div>;
+  return (
+    <div className="tbl-scroll">
+      <table className="tbl">
+        <thead>
+          <tr><th>Issue</th><th>Command</th><th>PIC</th><th>Deadline</th></tr>
+        </thead>
+        <tbody>
+          {rows.map((p) => {
+            const r = rekomendasi(p);
+            return (
+              <tr key={p.id}>
+                <td><b>{p.nama}</b><div className="ceo-sub">{p.status} · dev {p.deviasi.toFixed(1)}%</div></td>
+                <td>{r.aksi[0]}</td>
+                <td className="ceo-nowrap">{p.kontraktor || p.spv || "—"}</td>
+                <td className="ceo-nowrap">{p.status === "Critical Delay" ? "48 jam" : "Mingguan"}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
   );
 }
 

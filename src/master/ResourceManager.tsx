@@ -29,7 +29,7 @@ export function ResourceManager({ config }: { config: ResourceConfig }) {
   const [editing, setEditing] = useState<MasterRecord | null>(null);
   const [formOpen, setFormOpen] = useState(false);
 
-  const columns = useMemo(() => config.fields.filter((f) => !f.hideInTable), [config]);
+  const columns = useMemo(() => config.fields.filter((f) => !f.hideInTable && !f.uiOnly), [config]);
 
   // Related resources referenced by any "ref" field — loaded so we can show
   // human labels in the table and offer dropdowns in the form.
@@ -157,7 +157,15 @@ export function ResourceManager({ config }: { config: ResourceConfig }) {
               {items.map((rec) => (
                 <tr key={rec.id}>
                   {columns.map((c) => (
-                    <td key={c.name}>{c.type === "ref" ? refLabel(c, rec[c.name]) : cellText(rec[c.name])}</td>
+                    <td key={c.name}>
+                      {c.type === "ref"
+                        ? refLabel(c, rec[c.name])
+                        : c.type === "file"
+                          ? rec[c.name]
+                            ? <a href={api.fileUrl(String(rec[c.name]))} target="_blank" rel="noreferrer">📎 file</a>
+                            : ""
+                          : cellText(rec[c.name])}
+                    </td>
                   ))}
                   <td className="md-actions">
                     <button className="md-btn" onClick={() => openEdit(rec)}>
@@ -211,11 +219,14 @@ function RecordForm({
   onClose: () => void;
   onSaved: () => void;
 }) {
-  const refOptionsFor = (f: FieldDef): { value: string; label: string }[] =>
-    (refData[f.refResource ?? ""] ?? []).map((r) => ({
-      value: String(r.id),
-      label: String(r[f.refLabelField ?? "id"] ?? r.id),
-    }));
+  const refOptionsFor = (f: FieldDef, values: FormValues): { value: string; label: string }[] => {
+    let list = refData[f.refResource ?? ""] ?? [];
+    if (f.filterBy) {
+      const fv = values[f.filterBy.byField];
+      if (fv) list = list.filter((r) => String(r[f.filterBy!.refField] ?? "") === String(fv));
+    }
+    return list.map((r) => ({ value: String(r.id), label: String(r[f.refLabelField ?? "id"] ?? r.id) }));
+  };
   const [values, setValues] = useState<FormValues>(() => initialValues(config, editing));
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -273,7 +284,7 @@ function RecordForm({
               def={f}
               value={values[f.name] ?? ""}
               onChange={set}
-              refOptions={f.type === "ref" ? refOptionsFor(f) : undefined}
+              refOptions={f.type === "ref" ? refOptionsFor(f, values) : undefined}
             />
           ))}
         </div>
@@ -353,6 +364,8 @@ function Field({
             </option>
           ))}
         </select>
+      ) : def.type === "file" ? (
+        <FileField value={value} onChange={(v) => onChange(def.name, v)} suggest={def.name} />
       ) : def.type === "textarea" ? (
         <textarea rows={2} value={value} onChange={(e) => onChange(def.name, e.target.value)} />
       ) : (
@@ -363,6 +376,33 @@ function Field({
         />
       )}
     </label>
+  );
+}
+
+/** File upload field: pick a file → uploads → stores returned URL. */
+function FileField({ value, onChange, suggest }: { value: string; onChange: (v: string) => void; suggest: string }) {
+  const [busy, setBusy] = useState(false);
+  const pick = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    setBusy(true);
+    try {
+      const r = await api.upload(f, suggest);
+      onChange(r.url);
+    } catch (err) {
+      alert("Upload gagal: " + (err instanceof Error ? err.message : String(err)));
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="mdf-file">
+      {value && (
+        <a className="mdf-file-link" href={api.fileUrl(value)} target="_blank" rel="noreferrer">📎 Lihat file</a>
+      )}
+      <input type="file" onChange={pick} disabled={busy} />
+      {busy && <span className="mdf-file-busy">Mengunggah…</span>}
+    </div>
   );
 }
 
@@ -385,7 +425,7 @@ function buildPayload(config: ResourceConfig, editing: MasterRecord | null, valu
     payload.id = values.id.trim();
   }
   for (const f of config.fields) {
-    if (f.readOnly) continue; // derived server-side; never sent from the form
+    if (f.readOnly || f.uiOnly) continue; // derived/UI-only; never sent from the form
     const raw = values[f.name] ?? "";
     if (f.type === "number") payload[f.name] = raw === "" ? 0 : Number(raw);
     else if (f.type === "tags") payload[f.name] = raw.split(",").map((s) => s.trim()).filter(Boolean);
@@ -398,7 +438,7 @@ function buildPayload(config: ResourceConfig, editing: MasterRecord | null, valu
 
 /** Ordered column keys for the CSV template (id first when user-editable). */
 function importColumns(config: ResourceConfig): string[] {
-  return [...(config.idEditable ? ["id"] : []), ...config.fields.filter((f) => !f.readOnly).map((f) => f.name)];
+  return [...(config.idEditable ? ["id"] : []), ...config.fields.filter((f) => !f.readOnly && !f.uiOnly).map((f) => f.name)];
 }
 
 /** A blank record matching the schema — used as the import template/sample. */
@@ -406,7 +446,7 @@ function sampleRecord(config: ResourceConfig): Record<string, unknown> {
   const rec: Record<string, unknown> = {};
   if (config.idEditable) rec.id = "";
   for (const f of config.fields) {
-    if (f.readOnly) continue; // derived server-side; not part of the import template
+    if (f.readOnly || f.uiOnly) continue; // derived/UI-only; not part of the import template
     rec[f.name] =
       f.type === "number" ? 0 : f.type === "tags" ? [] : f.type === "select" ? f.options?.[0]?.value ?? "" : "";
   }
@@ -418,7 +458,7 @@ function normalizeRecord(config: ResourceConfig, raw: Record<string, unknown>): 
   const rec: Record<string, unknown> = {};
   if (config.idEditable && raw.id != null && String(raw.id).trim() !== "") rec.id = String(raw.id).trim();
   for (const f of config.fields) {
-    if (f.readOnly) continue; // derived server-side; ignore any imported value
+    if (f.readOnly || f.uiOnly) continue; // derived/UI-only; ignore any imported value
     const v = raw[f.name];
     if (f.type === "number") rec[f.name] = v == null || v === "" ? 0 : Number(v);
     else if (f.type === "tags")

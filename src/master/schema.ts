@@ -2,7 +2,7 @@
 // ResourceManager renders any of these configs. The model is relational
 // (docs/DATA_MODEL.md): "ref" fields pick a related record by id.
 
-export type FieldType = "text" | "number" | "textarea" | "select" | "tags" | "ref";
+export type FieldType = "text" | "number" | "textarea" | "select" | "tags" | "ref" | "file";
 
 export interface FieldDef {
   name: string;
@@ -13,6 +13,10 @@ export interface FieldDef {
   refResource?: string;
   /** For type "ref": which field of the related record to show as the option label. */
   refLabelField?: string;
+  /** UI-only helper field: shown in form, NOT saved/imported/shown in table. */
+  uiOnly?: boolean;
+  /** For type "ref": filter options to records where record[refField] === value of byField. */
+  filterBy?: { byField: string; refField: string };
   hideInTable?: boolean;
   /** Derived/computed field: shown but not editable, and excluded from imports. */
   readOnly?: boolean;
@@ -109,7 +113,8 @@ export const RESOURCES: ResourceConfig[] = [
     title: "Akad",
     singular: "Akad",
     fields: [
-      { name: "unitId", label: "Unit", type: "ref", refResource: "units", refLabelField: "blok", tip: "Unit yang diakad.", result: "Relasi akad → unit." },
+      { name: "proyekFilter", label: "Proyek", type: "ref", refResource: "proyek", refLabelField: "nama", uiOnly: true, tip: "Pilih proyek dulu untuk menyaring daftar unit." },
+      { name: "unitId", label: "Unit", type: "ref", refResource: "units", refLabelField: "blok", filterBy: { byField: "proyekFilter", refField: "proyekId" }, tip: "Unit yang diakad.", result: "Relasi akad → unit." },
       { name: "konsumenId", label: "Konsumen", type: "ref", refResource: "konsumen", refLabelField: "nama", tip: "Pembeli unit.", result: "Relasi akad → konsumen." },
       { name: "tglAkad", label: "Tgl Akad", type: "text", tip: "Tanggal akad (YYYY-MM-DD).", result: "Awal proses (Pola Bisnis)." },
     ],
@@ -120,9 +125,11 @@ export const RESOURCES: ResourceConfig[] = [
     title: "Ttd Gambar Kerja",
     singular: "Ttd Gambar Kerja",
     fields: [
-      { name: "unitId", label: "Unit", type: "ref", refResource: "units", refLabelField: "blok", tip: "Unit terkait.", result: "Relasi → unit." },
+      { name: "proyekFilter", label: "Proyek", type: "ref", refResource: "proyek", refLabelField: "nama", uiOnly: true, tip: "Pilih proyek dulu untuk menyaring daftar unit." },
+      { name: "unitId", label: "Unit", type: "ref", refResource: "units", refLabelField: "blok", filterBy: { byField: "proyekFilter", refField: "proyekId" }, tip: "Unit terkait.", result: "Relasi → unit." },
       { name: "tglAcc", label: "Tgl ACC Gambar Kerja", type: "text", tip: "Tanggal ACC/TTD gambar kerja (YYYY-MM-DD).", result: "ACUAN MULAI hitung progres pembangunan." },
       { name: "tglTerbitSpk", label: "Tgl Terbit SPK", type: "text", hideInTable: true, tip: "Tanggal penerbitan SPK.", result: "Jembatan ke SPK." },
+      { name: "lampiran", label: "Lampiran GK", type: "file", hideInTable: true, tip: "Upload file gambar kerja.", result: "Arsip gambar kerja." },
       { name: "keterangan", label: "Keterangan", type: "textarea", hideInTable: true, tip: "Catatan.", result: "Catatan." },
     ],
   },
@@ -133,19 +140,21 @@ export const RESOURCES: ResourceConfig[] = [
     singular: "SPK",
     fields: [
       { name: "nomorSpk", label: "Nomor SPK", type: "text", tip: "Nomor surat perintah kerja.", result: "Identitas transaksi SPK." },
-      { name: "unitId", label: "Unit", type: "ref", refResource: "units", refLabelField: "blok", tip: "Unit yang dibangun.", result: "Relasi SPK → unit." },
+      { name: "proyekFilter", label: "Proyek", type: "ref", refResource: "proyek", refLabelField: "nama", uiOnly: true, tip: "Pilih proyek dulu untuk menyaring daftar unit." },
+      { name: "unitId", label: "Unit", type: "ref", refResource: "units", refLabelField: "blok", filterBy: { byField: "proyekFilter", refField: "proyekId" }, tip: "Unit yang dibangun.", result: "Relasi SPK → unit." },
       { name: "kontraktorId", label: "Kontraktor", type: "ref", refResource: "kontraktor", refLabelField: "nama", tip: "Kontraktor pelaksana.", result: "Relasi SPK → kontraktor & ranking." },
       { name: "nomorSppr", label: "Nomor SPPR", type: "text", hideInTable: true, tip: "Nomor SPPR.", result: "Referensi dokumen." },
       { name: "tglTerbit", label: "Tgl Terbit", type: "text", hideInTable: true, tip: "Tanggal terbit SPK (YYYY-MM-DD).", result: "Acuan penerbitan." },
       { name: "tglMulai", label: "Tgl Mulai", type: "text", tip: "Tanggal mulai (YYYY-MM-DD).", result: "Acuan minggu berjalan (deviasi/SPI)." },
-      { name: "tglSelesaiTarget", label: "Tgl Selesai Target", type: "text", tip: "Target selesai (YYYY-MM-DD).", result: "Acuan target penyelesaian." },
+      { name: "tglSelesaiTarget", label: "Tgl Selesai Target", type: "text", readOnly: true, tip: "Otomatis: Tgl Mulai + 5 bulan (target standar).", result: "Acuan target penyelesaian." },
       { name: "lbSpk", label: "LB SPK (m²)", type: "number", hideInTable: true, tip: "Luas bangunan SPK (m²).", result: "Dasar nilai kontrak." },
       { name: "hargaPerM2", label: "Harga / m²", type: "number", hideInTable: true, tip: "Harga per m².", result: "Komponen nilai kontrak." },
-      { name: "nilaiKontrak", label: "Nilai Kontrak", type: "number", tip: "Nilai kontrak (Rp).", result: "Nilai pekerjaan + ranking kontraktor." },
+      { name: "nilaiKontrak", label: "Nilai Kontrak", type: "number", readOnly: true, tip: "Otomatis: LB × Harga/m².", result: "Nilai pekerjaan + ranking kontraktor." },
       { name: "layout", label: "Layout", type: "select", options: [
         { value: "STANDAR", label: "STANDAR" }, { value: "CUSTOM", label: "CUSTOM" },
       ], hideInTable: true, tip: "Layout standar/custom.", result: "Jenis layout." },
       { name: "nominalAddendum", label: "Nominal Addendum", type: "number", hideInTable: true, tip: "Nominal addendum (Rp).", result: "Penyesuaian nilai kontrak." },
+      { name: "totalNilai", label: "Total Nilai Kontrak", type: "number", readOnly: true, tip: "Otomatis: Nilai Kontrak + Addendum.", result: "Total nilai pekerjaan." },
     ],
   },
   {
@@ -154,11 +163,12 @@ export const RESOURCES: ResourceConfig[] = [
     title: "Progres Mingguan",
     singular: "Progres",
     fields: [
-      { name: "unitId", label: "Unit", type: "ref", refResource: "units", refLabelField: "blok", tip: "Unit yang dilaporkan.", result: "Relasi progres → unit." },
+      { name: "proyekFilter", label: "Proyek", type: "ref", refResource: "proyek", refLabelField: "nama", uiOnly: true, tip: "Pilih proyek dulu untuk menyaring daftar unit." },
+      { name: "unitId", label: "Unit", type: "ref", refResource: "units", refLabelField: "blok", filterBy: { byField: "proyekFilter", refField: "proyekId" }, tip: "Unit yang dilaporkan.", result: "Relasi progres → unit." },
       { name: "mingguKe", label: "Minggu Ke", type: "number", tip: "Minggu berjalan (1–20).", result: "Sumbu waktu Kurva S." },
       { name: "aktual", label: "Aktual (%)", type: "number", tip: "Progres aktual kumulatif (%).", result: "Realisasi pada Kurva S." },
       { name: "target", label: "Target (%)", type: "number", tip: "Target kumulatif (%) dari Kurva S.", result: "Pembanding deviasi/SPI." },
-      { name: "linkFoto", label: "Link Foto", type: "text", hideInTable: true, tip: "Tautan bukti foto progres.", result: "Lampiran bukti." },
+      { name: "linkFoto", label: "Foto Progres", type: "file", hideInTable: true, tip: "Upload foto progres — tersimpan otomatis di server.", result: "Lampiran bukti progres." },
       { name: "updatedBy", label: "Diupdate Oleh", type: "text", hideInTable: true, tip: "User penginput.", result: "Jejak audit." },
       { name: "tglUpdate", label: "Tgl Update", type: "text", hideInTable: true, tip: "Tanggal update (YYYY-MM-DD).", result: "Kebaruan data." },
     ],
@@ -171,9 +181,9 @@ export const RESOURCES: ResourceConfig[] = [
     fields: [
       { name: "spkId", label: "SPK", type: "ref", refResource: "spk", refLabelField: "nomorSpk", tip: "SPK yang diserahterimakan.", result: "Relasi BAST → SPK." },
       { name: "tglSerahTerima", label: "Tgl Serah Terima", type: "text", tip: "Tanggal serah terima dari kontraktor (YYYY-MM-DD).", result: "Penutupan pekerjaan kontraktor." },
-      { name: "linkFoto", label: "Link Foto", type: "text", hideInTable: true, tip: "Tautan foto serah terima.", result: "Bukti." },
-      { name: "linkBapp", label: "Link BAPP", type: "text", hideInTable: true, tip: "Tautan form BAPP.", result: "Dokumen BAPP." },
-      { name: "linkCeklis", label: "Link Ceklis", type: "text", hideInTable: true, tip: "Tautan form ceklis.", result: "Dokumen ceklis." },
+      { name: "linkFoto", label: "Lampiran Foto", type: "file", hideInTable: true, tip: "Upload foto serah terima.", result: "Bukti serah terima." },
+      { name: "linkBapp", label: "Lampiran BAPP", type: "file", hideInTable: true, tip: "Upload form BAPP.", result: "Dokumen BAPP." },
+      { name: "linkCeklis", label: "Lampiran Ceklis", type: "file", hideInTable: true, tip: "Upload form ceklis.", result: "Dokumen ceklis." },
     ],
   },
   {
@@ -182,13 +192,15 @@ export const RESOURCES: ResourceConfig[] = [
     title: "BAST Konsumen",
     singular: "BAST Konsumen",
     fields: [
-      { name: "unitId", label: "Unit", type: "ref", refResource: "units", refLabelField: "blok", tip: "Unit yang diserahterimakan.", result: "Relasi BAST → unit." },
+      { name: "proyekFilter", label: "Proyek", type: "ref", refResource: "proyek", refLabelField: "nama", uiOnly: true, tip: "Pilih proyek dulu untuk menyaring daftar unit." },
+      { name: "unitId", label: "Unit", type: "ref", refResource: "units", refLabelField: "blok", filterBy: { byField: "proyekFilter", refField: "proyekId" }, tip: "Unit yang diserahterimakan.", result: "Relasi BAST → unit." },
       { name: "konsumenId", label: "Konsumen", type: "ref", refResource: "konsumen", refLabelField: "nama", tip: "Konsumen penerima.", result: "Relasi BAST → konsumen." },
       { name: "tglBast", label: "Tgl BAST", type: "text", tip: "Tanggal serah terima ke konsumen (YYYY-MM-DD).", result: "Penutupan ke konsumen." },
       { name: "status", label: "Status", type: "select", options: [
         { value: "Belum BAST", label: "Belum BAST" }, { value: "Sudah BAST", label: "Sudah BAST" },
       ], tip: "Status serah terima.", result: "Status BAST." },
-      { name: "scanBerkas", label: "Scan Berkas", type: "text", hideInTable: true, tip: "Tautan scan berkas BAST.", result: "Arsip dokumen." },
+      { name: "lampiranFoto", label: "Lampiran Foto BAST", type: "file", hideInTable: true, tip: "Upload foto serah terima ke konsumen.", result: "Bukti BAST." },
+      { name: "scanBerkas", label: "Scan Berkas BAST", type: "file", hideInTable: true, tip: "Upload scan berkas BAST.", result: "Arsip dokumen." },
     ],
   },
   {
@@ -197,7 +209,8 @@ export const RESOURCES: ResourceConfig[] = [
     title: "Komplain",
     singular: "Komplain",
     fields: [
-      { name: "unitId", label: "Unit", type: "ref", refResource: "units", refLabelField: "blok", tip: "Unit yang dikomplain.", result: "Relasi komplain → unit." },
+      { name: "proyekFilter", label: "Proyek", type: "ref", refResource: "proyek", refLabelField: "nama", uiOnly: true, tip: "Pilih proyek dulu untuk menyaring daftar unit." },
+      { name: "unitId", label: "Unit", type: "ref", refResource: "units", refLabelField: "blok", filterBy: { byField: "proyekFilter", refField: "proyekId" }, tip: "Unit yang dikomplain.", result: "Relasi komplain → unit." },
       { name: "tgl", label: "Tanggal", type: "text", tip: "Tanggal komplain (YYYY-MM-DD).", result: "Mulai aging." },
       { name: "keterangan", label: "Keterangan", type: "textarea", tip: "Isi komplain.", result: "Detail keluhan." },
       { name: "status", label: "Status", type: "select", options: [
@@ -213,7 +226,8 @@ export const RESOURCES: ResourceConfig[] = [
     title: "Defect (QC)",
     singular: "Defect",
     fields: [
-      { name: "unitId", label: "Unit", type: "ref", refResource: "units", refLabelField: "blok", tip: "Unit dengan defect.", result: "Relasi defect → unit." },
+      { name: "proyekFilter", label: "Proyek", type: "ref", refResource: "proyek", refLabelField: "nama", uiOnly: true, tip: "Pilih proyek dulu untuk menyaring daftar unit." },
+      { name: "unitId", label: "Unit", type: "ref", refResource: "units", refLabelField: "blok", filterBy: { byField: "proyekFilter", refField: "proyekId" }, tip: "Unit dengan defect.", result: "Relasi defect → unit." },
       { name: "kategori", label: "Kategori", type: "text", tip: "Kategori defect (mis. Rembes, Retak).", result: "Pengelompokan defect." },
       { name: "status", label: "Status", type: "select", options: [
         { value: "open", label: "Open" }, { value: "closed", label: "Closed" },
@@ -230,7 +244,8 @@ export const RESOURCES: ResourceConfig[] = [
     title: "Recovery Plan",
     singular: "Recovery Plan",
     fields: [
-      { name: "unitId", label: "Unit", type: "ref", refResource: "units", refLabelField: "blok", tip: "Unit/proyek kritis.", result: "Relasi recovery → unit." },
+      { name: "proyekFilter", label: "Proyek", type: "ref", refResource: "proyek", refLabelField: "nama", uiOnly: true, tip: "Pilih proyek dulu untuk menyaring daftar unit." },
+      { name: "unitId", label: "Unit", type: "ref", refResource: "units", refLabelField: "blok", filterBy: { byField: "proyekFilter", refField: "proyekId" }, tip: "Unit/proyek kritis.", result: "Relasi recovery → unit." },
       { name: "rootCause", label: "Root Cause", type: "textarea", tip: "Akar penyebab keterlambatan.", result: "Analisa penyebab (wajib bila Critical)." },
       { name: "targetPercepatan", label: "Target Percepatan", type: "text", tip: "Target percepatan (mis. +5%/minggu).", result: "Sasaran pemulihan." },
       { name: "status", label: "Status", type: "select", options: [
