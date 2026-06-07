@@ -131,7 +131,6 @@ export const RESOURCES: ResourceConfig[] = [
       { name: "proyekFilter", label: "Proyek", type: "ref", refResource: "proyek", refLabelField: "nama", uiOnly: true, tip: "Pilih proyek dulu untuk menyaring daftar unit." },
       { name: "unitId", label: "Unit", type: "ref", refResource: "units", refLabelField: "blok", filterBy: { byField: "proyekFilter", refField: "proyekId" }, tip: "Unit yang dibangun.", result: "Relasi SPK → unit." },
       { name: "kontraktorId", label: "Kontraktor", type: "ref", refResource: "kontraktor", refLabelField: "nama", tip: "Kontraktor pelaksana.", result: "Relasi SPK → kontraktor & ranking." },
-      { name: "nomorSppr", label: "Nomor SPPR", type: "text", hideInTable: true, tip: "Nomor SPPR.", result: "Referensi dokumen." },
       { name: "tglTerbit", label: "Tgl Terbit", type: "text", hideInTable: true, tip: "Tanggal terbit SPK (YYYY-MM-DD).", result: "Acuan penerbitan." },
       { name: "tglMulai", label: "Tgl Mulai", type: "text", tip: "Tanggal mulai (YYYY-MM-DD).", result: "Acuan minggu berjalan (deviasi/SPI)." },
       { name: "tglSelesaiTarget", label: "Tgl Selesai Target", type: "text", readOnly: true, tip: "Otomatis: Tgl Mulai + 5 bulan (target standar).", result: "Acuan target penyelesaian." },

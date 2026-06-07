@@ -90,7 +90,6 @@ export interface SPK {
   nomorSpk: string;
   unitId: string;
   kontraktorId: string;
-  nomorSppr: string;
   tglTerbit: string;
   tglMulai: string;
   tglSelesaiTarget: string;
