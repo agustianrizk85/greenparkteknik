@@ -95,17 +95,6 @@ export const RESOURCES: ResourceConfig[] = [
       { name: "nama", label: "Nama Kontraktor", type: "text", tip: "Nama kontraktor/vendor.", result: "Dipakai di SPK & ranking kontraktor." },
     ],
   },
-  {
-    key: "konsumen",
-    group: "Master",
-    title: "Konsumen",
-    singular: "Konsumen",
-    fields: [
-      { name: "nama", label: "Nama Konsumen", type: "text", tip: "Nama pembeli unit.", result: "Dipakai di Akad & BAST (serah terima)." },
-      { name: "telp", label: "Telepon", type: "text", hideInTable: false, tip: "Nomor telepon konsumen.", result: "Kontak konsumen." },
-      { name: "email", label: "Email", type: "text", hideInTable: true, tip: "Email konsumen.", result: "Kontak konsumen." },
-    ],
-  },
   /* ===== TRANSAKSI (urut alur bisnis) ===== */
   {
     key: "akad",
@@ -115,7 +104,6 @@ export const RESOURCES: ResourceConfig[] = [
     fields: [
       { name: "proyekFilter", label: "Proyek", type: "ref", refResource: "proyek", refLabelField: "nama", uiOnly: true, tip: "Pilih proyek dulu untuk menyaring daftar unit." },
       { name: "unitId", label: "Unit", type: "ref", refResource: "units", refLabelField: "blok", filterBy: { byField: "proyekFilter", refField: "proyekId" }, tip: "Unit yang diakad.", result: "Relasi akad → unit." },
-      { name: "konsumenId", label: "Konsumen", type: "ref", refResource: "konsumen", refLabelField: "nama", tip: "Pembeli unit.", result: "Relasi akad → konsumen." },
       { name: "tglAkad", label: "Tgl Akad", type: "text", tip: "Tanggal akad (YYYY-MM-DD).", result: "Awal proses (Pola Bisnis)." },
     ],
   },
@@ -194,7 +182,6 @@ export const RESOURCES: ResourceConfig[] = [
     fields: [
       { name: "proyekFilter", label: "Proyek", type: "ref", refResource: "proyek", refLabelField: "nama", uiOnly: true, tip: "Pilih proyek dulu untuk menyaring daftar unit." },
       { name: "unitId", label: "Unit", type: "ref", refResource: "units", refLabelField: "blok", filterBy: { byField: "proyekFilter", refField: "proyekId" }, tip: "Unit yang diserahterimakan.", result: "Relasi BAST → unit." },
-      { name: "konsumenId", label: "Konsumen", type: "ref", refResource: "konsumen", refLabelField: "nama", tip: "Konsumen penerima.", result: "Relasi BAST → konsumen." },
       { name: "tglBast", label: "Tgl BAST", type: "text", tip: "Tanggal serah terima ke konsumen (YYYY-MM-DD).", result: "Penutupan ke konsumen." },
       { name: "status", label: "Status", type: "select", options: [
         { value: "Belum BAST", label: "Belum BAST" }, { value: "Sudah BAST", label: "Sudah BAST" },

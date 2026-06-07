@@ -75,13 +75,6 @@ export interface Kontraktor {
   nama: string;
 }
 
-export interface Konsumen {
-  id: string;
-  nama: string;
-  telp: string;
-  email: string;
-}
-
 export interface Termin {
   id: string;
   no: number;
@@ -123,7 +116,6 @@ export interface ProgresMingguan {
 export interface Akad {
   id: string;
   unitId: string;
-  konsumenId: string;
   tglAkad: string;
 }
 
@@ -148,7 +140,6 @@ export interface BastKontraktor {
 export interface BastKonsumen {
   id: string;
   unitId: string;
-  konsumenId: string;
   tglBast: string;
   status: string;
   lampiranFoto: string;
